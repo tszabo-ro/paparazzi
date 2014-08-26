@@ -37,6 +37,8 @@
 //Buffer zone in [m] before MAX_DIST_FROM_HOME
 #define BUFFER_ZONE_DIST 10
 
+int32_t mission_lag = 2;
+
 // Utility function: converts lla to local point
 bool_t mission_point_of_lla(struct EnuCoor_f *point, struct LlaCoor_f *lla) {
   // return FALSE if there is no valid local coordinate

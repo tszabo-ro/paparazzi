@@ -47,6 +47,7 @@
 #include "subsystems/datalink/downlink.h"
 #include "messages.h"
 #include "mcu_periph/uart.h"
+#include "dl_protocol.h"
 
 const uint8_t nb_waypoint = NB_WAYPOINT;
 struct EnuCoor_i waypoints[NB_WAYPOINT];
@@ -503,5 +504,45 @@ bool_t nav_set_heading_towards_waypoint(uint8_t wp) {
 /** Set heading to the current yaw angle */
 bool_t nav_set_heading_current(void) {
   nav_heading = stateGetNedToBodyEulers_i()->psi;
+  return FALSE;
+}
+
+bool_t mission_decrease_lag(void) {
+  uint8_t ac_id = 42;
+  float test = 0;
+  
+
+  DOWNLINK_SEND_MISSION_GOTO_WP_TM(DefaultChannel, DefaultDevice,
+      &ac_id,
+      &ac_id,
+      &test,
+      &test,
+      &test,
+      &test);
+
+  return FALSE;
+}
+
+bool_t send_mission_segment(uint8_t from_wp, uint8_t to_wp) {
+  uint8_t ac_id = 42;
+  uint8_t insert = 0;
+  float wp_east_1 = POS_FLOAT_OF_BFP(waypoints[from_wp].x);
+  float wp_north_1 = POS_FLOAT_OF_BFP(waypoints[from_wp].y);
+  float wp_east_2 = POS_FLOAT_OF_BFP(waypoints[to_wp].x);
+  float wp_north_2 = POS_FLOAT_OF_BFP(waypoints[to_wp].y);
+  float wp_alt = POS_FLOAT_OF_BFP(waypoints[to_wp].z);
+  float duration = 0;
+
+
+  DOWNLINK_SEND_MISSION_SEGMENT_TM(DefaultChannel, DefaultDevice,
+      &ac_id,
+      &insert,
+      &wp_east_1,
+      &wp_north_1,
+      &wp_east_2,
+      &wp_north_2,
+      &wp_alt,
+      &duration);
+
   return FALSE;
 }

@@ -1172,7 +1172,14 @@
     <field name="status" type="uint8" values="UNINIT|RUNNING|LOCKED"/>
   </message>
 
-  <!-- 138 is free -->
+  <message name="MISSION_GOTO_WP_TM" id="138">
+    <field name="ac_id" type="uint8"/>
+    <field name="insert" type="uint8" values="APPEND|PREPEND|REPLACE_CURRENT|REPLACE_ALL"/>
+    <field name="wp_east" type="float" unit="m"/>
+    <field name="wp_north" type="float" unit="m"/>
+    <field name="wp_alt" type="float" unit="m"/>
+    <field name="duration" type="float" unit="s"/>
+  </message>
 
   <message name="FILTER_COR" id="139">
     <field name="mphi"   type="int32"/>
@@ -1312,7 +1319,16 @@
     <field name="flight_time"   type="uint16" unit="s"/>
   </message>
 
-  <!-- 148 is free -->
+  <message name="MISSION_SEGMENT_TM" id="148">
+    <field name="ac_id" type="uint8"/>
+    <field name="insert" type="uint8" values="APPEND|PREPEND|REPLACE_CURRENT|REPLACE_ALL"/>
+    <field name="segment_east_1" type="float" unit="m"/>
+    <field name="segment_north_1" type="float" unit="m"/>
+    <field name="segment_east_2" type="float" unit="m"/>
+    <field name="segment_north_2" type="float" unit="m"/>
+    <field name="segment_alt" type="float" unit="m"/>
+    <field name="duration" type="float" unit="s"/>
+  </message>
 
   <message name="GUIDANCE_H_REF_INT" id="149">
     <field name="sp_x"    type="int32" alt_unit="m"     alt_unit_coef="0.0039063"/>
@@ -1914,7 +1930,9 @@
     <field name="wn"          type="float"/>
   </message>
 
- <!--215 is free -->
+  <message name="MISSION_DECREASE_LAG_TM" id="215">
+    <field name="ac_id" type="uint8"/>
+  </message>
  <!--216 is free -->
  <!--217 is free -->
  <!--218 is free -->
@@ -2283,7 +2301,7 @@
   </message>
 
 
-  <message name="MISSION_GOTO_WP" id="20" link="forwarded">
+  <message name="MISSION_GOTO_WP" id="20" link="broadcasted">
     <field name="ac_id" type="uint8"/>
     <field name="insert" type="uint8" values="APPEND|PREPEND|REPLACE_CURRENT|REPLACE_ALL"/>
     <field name="wp_east" type="float" unit="m"/>
@@ -2414,6 +2432,9 @@
     <field name="ac_id" type="uint8"/>
   </message>
 
+  <message name="MISSION_DECREASE_LAG" id="33" link="broadcasted">
+    <field name="ac_id" type="uint8"/>
+  </message>
 
  <message name="WINDTURBINE_STATUS" id="50" link="broadcasted">
    <field name="ac_id" type="uint8"/>

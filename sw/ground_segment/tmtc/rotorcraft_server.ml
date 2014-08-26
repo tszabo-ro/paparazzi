@@ -206,6 +206,12 @@ let log_and_parse = fun ac_name (a:Aircraft.aircraft) msg values ->
       a.cur_stage <- ivalue "cur_stage";
       a.horizontal_mode <- check_index (ivalue "horizontal_mode") horiz_modes "AP_HORIZ";
   (*a.dist_to_wp <- sqrt (fvalue "dist2_wp")*)
+    | "MISSION_DECREASE_LAG_TM" ->
+      Dl_Pprz.message_send "ground_dl" "MISSION_DECREASE_LAG" values
+    | "MISSION_SEGMENT_TM" ->
+      Dl_Pprz.message_send "ground_dl" "MISSION_SEGMENT" values
+    | "MISSION_GOTO_WP_TM" ->
+      Dl_Pprz.message_send "ground_dl" "MISSION_GOTO_WP" values
     | "WP_MOVED_ENU" ->
       begin
         match a.nav_ref with

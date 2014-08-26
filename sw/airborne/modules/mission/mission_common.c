@@ -110,8 +110,10 @@ void mission_status_report(void) {
     remaining_time = mission.elements[mission.current_idx].duration - mission.element_time;
   }
 
+  float test_lag = mission_lag;
+
   // send status
-  DOWNLINK_SEND_MISSION_STATUS(DefaultChannel, DefaultDevice, &remaining_time, j, task_list);
+  DOWNLINK_SEND_MISSION_STATUS(DefaultChannel, DefaultDevice, &test_lag, j, task_list);
 }
 
 
@@ -122,16 +124,23 @@ void mission_status_report(void) {
 int mission_parse_GOTO_WP(void) {
   if (DL_MISSION_GOTO_WP_ac_id(dl_buffer) != AC_ID) return FALSE; // not for this aircraft
 
-  struct _mission_element me;
-  me.type = MissionWP;
-  me.element.mission_wp.wp.wp_f.x = DL_MISSION_GOTO_WP_wp_east(dl_buffer);
-  me.element.mission_wp.wp.wp_f.y = DL_MISSION_GOTO_WP_wp_north(dl_buffer);
-  me.element.mission_wp.wp.wp_f.z = DL_MISSION_GOTO_WP_wp_alt(dl_buffer);
-  me.duration = DL_MISSION_GOTO_WP_duration(dl_buffer);
+  if (mission_lag == 0) {  mission_lag = 0;}// lag already zero
 
-  enum MissionInsertMode insert = (enum MissionInsertMode) (DL_MISSION_GOTO_WP_insert(dl_buffer));
+  // increment current index
+  mission_lag = mission_lag - 1;
 
-  return mission_insert(insert, &me);
+  return TRUE;
+
+//   struct _mission_element me;
+//   me.type = MissionWP;
+//   me.element.mission_wp.wp.wp_f.x = DL_MISSION_GOTO_WP_wp_east(dl_buffer);
+//   me.element.mission_wp.wp.wp_f.y = DL_MISSION_GOTO_WP_wp_north(dl_buffer);
+//   me.element.mission_wp.wp.wp_f.z = DL_MISSION_GOTO_WP_wp_alt(dl_buffer);
+//   me.duration = DL_MISSION_GOTO_WP_duration(dl_buffer);
+// 
+//   enum MissionInsertMode insert = (enum MissionInsertMode) (DL_MISSION_GOTO_WP_insert(dl_buffer));
+// 
+//   return mission_insert(insert, &me);
 }
 
 int mission_parse_GOTO_WP_LLA(void) {
@@ -327,3 +336,12 @@ int mission_parse_END_MISSION(void) {
   return TRUE;
 }
 
+int mission_parse_MISSION_DECREASE_LAG(void) {
+  if (DL_MISSION_DECREASE_LAG_ac_id(dl_buffer) != AC_ID) return FALSE; // not for this aircraft
+
+  if (mission_lag == 0) {  mission_lag = 0; return FALSE; }// lag already zero
+
+  // increment current index
+  mission_lag = mission_lag - 1;
+  return TRUE;
+}

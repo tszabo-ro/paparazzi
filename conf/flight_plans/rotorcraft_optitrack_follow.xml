@@ -1,6 +1,6 @@
 <!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
 
-<flight_plan alt="1.5" ground_alt="0" lat0="51.990634" lon0="4.376771" max_dist_from_home="15" name="Vision_drone" security_height="0.1">
+<flight_plan alt="1.5" ground_alt="0" lat0="51.990634" lon0="4.376771" max_dist_from_home="15" name="Vision_drone_follow" security_height="0.1">
   <header>
 #include "autopilot.h"
 #include "../../../ext/ardrone2_vision/modules/StereoAvoid/avoid_navigation.h"
@@ -39,6 +39,7 @@
     </block>
     <block name="Holding point">
       <call fun="NavKillThrottle()"/>
+      <set var="mission_lag" value="2"/>
       <attitude pitch="0" roll="0" throttle="0" vmode="throttle" until="FALSE"/>
     </block>
     <block name="Start Engine">
@@ -52,6 +53,7 @@
       <stay climb="0.5" vmode="climb" wp="CLIMB"/>
     </block>
     <block name="Standby" strip_button="Standby" strip_icon="home.png">
+      <exception cond="mission.insert_idx>1" deroute="Mission"/>
       <call fun="NavSetWaypointHere(WP_STDBY)"/>
       <call fun="NavCopyWaypoint(WP_last_wp,WP_W0)"/>
       <stay wp="STDBY"/>
@@ -65,8 +67,6 @@
       <exception cond="obstacle_detected==1" deroute="stay_W0"/>
       <call fun="nav_set_heading_towards_waypoint(WP_GOAL)"/>
       <go from="STDBY" hmode="route" wp="GOAL"/>
-      <call fun="send_mission_segment(WP_last_wp,WP_GOAL)"/>
-      <call fun="NavCopyWaypoint(WP_last_wp,WP_GOAL)"/>
       <deroute block="land here"/>
     </block>
     <block name="stay_W0" pre_call="increase_nav_heading(&nav_heading, 45)">
@@ -89,7 +89,6 @@
     </block>
     <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
       <call fun="NavSetWaypointHere(WP_TD)"/>
-      <call fun="mission_decrease_lag()"/>
     </block>
     <block name="land">
       <go wp="TD"/>
@@ -98,12 +97,10 @@
       <exception cond="NavDetectGround()" deroute="landed"/>
       <exception cond="!nav_is_in_flight()" deroute="landed"/>
       <call fun="NavStartDetectGround()"/>
-      <call fun="mission_decrease_lag()"/>
       <stay climb="-0.8" vmode="climb" wp="TD"/>
     </block>
     <block name="landed">
       <call fun="NavKillThrottle()"/>
-      <call fun="mission_decrease_lag()"/>
       <attitude pitch="0" roll="0" throttle="0" vmode="throttle" until="FALSE"/>
     </block>
   </blocks>

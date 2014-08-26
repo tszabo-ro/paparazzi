@@ -118,6 +118,8 @@ struct _mission {
 
 extern struct _mission mission;
 
+extern int32_t mission_lag;
+
 /** Init mission structure
 */
 extern void mission_init(void);
@@ -180,6 +182,7 @@ extern int mission_parse_SURVEY_LLA(void);
 extern int mission_parse_GOTO_MISSION(void);
 extern int mission_parse_NEXT_MISSION(void);
 extern int mission_parse_END_MISSION(void);
+extern int mission_parse_MISSION_DECREASE_LAG(void);
 
 #endif // MISSION_COMMON_H
 
