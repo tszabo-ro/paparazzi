@@ -99,7 +99,7 @@
       <exception cond="!nav_is_in_flight()" deroute="landed"/>
       <call fun="NavStartDetectGround()"/>
       <call fun="mission_decrease_lag()"/>
-      <stay climb="-0.8" vmode="climb" wp="TD"/>
+      <stay climb="-1.0" vmode="climb" wp="TD" until="stage_time > 5"/>
     </block>
     <block name="landed">
       <call fun="NavKillThrottle()"/>
