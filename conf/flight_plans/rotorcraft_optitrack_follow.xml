@@ -85,7 +85,7 @@
     </block>
     <block name="Mission" strip_button="Mission">
       <call fun="mission_run()"/>
-      <deroute block="Standby"/>
+      <deroute block="land here"/>
     </block>
     <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
       <call fun="NavSetWaypointHere(WP_TD)"/>
