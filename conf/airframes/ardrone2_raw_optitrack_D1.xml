@@ -32,7 +32,8 @@
 
   <modules main_freq="512">
 <!--     <load name="../../sw/ext/ardrone2_vision/modules/StereoAvoid/StereoAvoid.xml"/> -->
-    <load name="mission_rotorcraft.xml"/>
+<!--     <load name="mission_rotorcraft.xml"/> -->
+    <load name="bluegiga.xml" />
   </modules>
 
   <commands>
