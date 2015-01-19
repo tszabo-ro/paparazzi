@@ -178,6 +178,19 @@ static void send_fp(void) {
       &autopilot_flight_time);
 }
 
+// static void send_bluegps(struct transport_tx *trans, struct link_device *dev)
+// {
+//   pprz_msg_send_BLUEGPS(trans, dev, AC_ID,
+//                               &(rssi[0]),
+//                               &(stateGetPositionEnu_i()->x),
+//                               &(stateGetPositionEnu_i()->y),
+//                               &(stateGetPositionEnu_i()->z),
+//                               &(stateGetSpeedEnu_i()->x),
+//                               &(stateGetSpeedEnu_i()->y),
+//                               &(stateGetSpeedEnu_i()->z),
+//                               &(stateGetNedToBodyEulers_i()->psi));
+// }
+
 #ifdef RADIO_CONTROL
 static void send_rc(void) {
   DOWNLINK_SEND_RC(DefaultChannel, DefaultDevice, RADIO_CONTROL_NB_CHANNEL, radio_control.values);
@@ -251,6 +264,7 @@ void autopilot_init(void) {
   register_periodic_telemetry(DefaultPeriodic, "ROTORCRAFT_STATUS", send_status);
   register_periodic_telemetry(DefaultPeriodic, "ENERGY", send_energy);
   register_periodic_telemetry(DefaultPeriodic, "ROTORCRAFT_FP", send_fp);
+//   register_periodic_telemetry(DefaultPeriodic, "BLUEGPS", send_bluegps);
   register_periodic_telemetry(DefaultPeriodic, "ROTORCRAFT_CMD", send_rotorcraft_cmd);
   register_periodic_telemetry(DefaultPeriodic, "DL_VALUE", send_dl_value);
 #ifdef ACTUATORS
