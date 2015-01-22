@@ -4,21 +4,23 @@
 
   <firmware name="rotorcraft">
     <target name="ap" board="ardrone2_raw">
+      <configure name="HOST" value="192.168.209.234"/>
+      <define name="LINK_HOST" value="\\\"192.168.209.14\\\""/>
+      <define name="AUTOPILOT_DISABLE_AHRS_KILL"/>
       <define name="FAILSAFE_DESCENT_SPEED" value="0.5"/>
       <configure name="USE_MAGNETOMETER" value="0"/>
 
       <subsystem name="telemetry" type="udp"/>
       <subsystem name="radio_control" type="datalink"/>
-      <configure name="HOST" value="192.168.209.234" />
-      <define name="LINK_HOST" value="\\\"192.168.209.19\\\""/>
     </target>
 
     <target name="nps" board="pc">
       <subsystem name="fdm" type="jsbsim"/>
       <subsystem name="radio_control" type="ppm"/>
+      <configure name="USE_MISSION_COMMANDS_IN_NPS" value="1"/>
     </target>
 
-	<!-- Subsystem section -->
+  <!-- Subsystem section -->
     <subsystem name="motor_mixing"/>
     <subsystem name="actuators" type="ardrone2"/>
     <subsystem name="imu" type="ardrone2"/>
@@ -29,6 +31,8 @@
   </firmware>
 
   <modules main_freq="512">
+<!--     <load name="../../sw/ext/ardrone2_vision/modules/StereoAvoid/StereoAvoid.xml"/> -->
+<!--     <load name="mission_rotorcraft.xml"/> -->
     <load name="bluegiga.xml" />
   </modules>
 
@@ -93,7 +97,7 @@
   </section>
 
   <!-- local magnetic field -->
-  <!-- http://wiki.paparazziuav.org/wiki/Subsystem/ahrs#Local_Magnetic_Field -->
+  <!-- http://paparazzi.enac.fr/wiki/Subsystem/ahrs#Local_Magnetic_Field -->
   <section name="AHRS" prefix="AHRS_">
     <!-- Toulouse -->
     <define name="H_X" value="0.513081"/>
@@ -201,19 +205,20 @@
     <define name="REF_OMEGA" value="RadOfDeg(67.)"/>
     <define name="REF_ZETA" value="0.85"/>
     <define name="REF_MAX_ACCEL" value="5.66"/>
-    <define name="REF_MAX_SPEED" value="3"/>
+    <define name="REF_MAX_SPEED" value="0.4"/>
 
     <!-- gains -->
     <define name="PGAIN" value="116"/>
     <define name="DGAIN" value="60"/>
     <define name="IGAIN" value="30"/>
     <define name="VGAIN" value="0"/>
-    <define name="AGAIN" value="62"/>
+    <define name="AGAIN" value="0"/>
   </section>
 
   <section name="SIMULATOR" prefix="NPS_">
     <define name="ACTUATOR_NAMES" value="{&quot;nw_motor&quot;, &quot;ne_motor&quot;, &quot;se_motor&quot;, &quot;sw_motor&quot;}"/>
     <define name="JSBSIM_MODEL" value="&quot;simple_ardrone2&quot;"/>
+    <define name="JSBSIM_INIT" value="&quot;reset00&quot;"/>
     <define name="SENSORS_PARAMS" value="&quot;nps_sensors_params_ardrone2.h&quot;"/>
   </section>
 
@@ -222,13 +227,16 @@
     <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
     <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
     <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
+
+    <define name="ARRIVED_AT_WAYPOINT" value="0.15"/>
+    <define name="AUTOPILOT_IN_FLIGHT_MIN_THRUST" value="1500"/>
   </section>
 
   <section name="BAT">
     <define name="MILLIAMP_AT_FULL_THROTTLE" value="8700"/>
-    <define name="CATASTROPHIC_BAT_LEVEL" value="9.3" unit="V"/>
-    <define name="CRITIC_BAT_LEVEL" value="9.6" unit="V"/>
-    <define name="LOW_BAT_LEVEL" value="9.7" unit="V"/>
+    <define name="CATASTROPHIC_BAT_LEVEL" value="9.7" unit="V"/>
+    <define name="CRITIC_BAT_LEVEL" value="9.9" unit="V"/>
+    <define name="LOW_BAT_LEVEL" value="10.5" unit="V"/>
     <define name="MAX_BAT_LEVEL" value="12.4" unit="V"/>
   </section>
 </airframe>
