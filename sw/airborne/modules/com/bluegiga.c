@@ -25,8 +25,8 @@
 
 #include "modules/com/bluegiga.h"
 
-#include "mcu_periph/gpio.h"
-// #include "mcu_periph/spi.h"
+//#include "mcu_periph/gpio.h"
+//#include "mcu_periph/spi.h"
 #include "led.h"
 
 #include <sys/types.h>
@@ -105,13 +105,18 @@ void bluegiga_com_init()
 
   strcpy(send_data, "1");
 
+  if (bind(sock, (struct sockaddr *)&server_addr,
+           sizeof(struct sockaddr)) == -1) {
+    perror("Bind");
+    exit(1);
+  }
 }
 
 uint8_t counter = 0;
 void bluegiga_com_periodic()
 {
-  sendto(sock, send_data, strlen(send_data), MSG_DONTWAIT,
-         (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+//  sendto(sock, send_data, strlen(send_data), MSG_DONTWAIT,
+//         (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
 
   bytes_recv = recvfrom(sock, recv_data, 1024, MSG_DONTWAIT, (struct sockaddr *)&server_addr, (socklen_t *)&sin_size);
   // recv_data[bytes_recv]= '\0';

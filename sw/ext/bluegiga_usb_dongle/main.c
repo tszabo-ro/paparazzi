@@ -37,6 +37,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 int sock;
 int addr_len, bytes_read;
@@ -96,10 +97,10 @@ const char *state_names[state_last] = {
 #define FIRST_HANDLE 0x0001
 #define LAST_HANDLE  0xffff
 
-#define DRONE_SERVICE_UUID            0x77cc
-#define DRONE_DATA_UUID         0x3cc1
-#define DRONE_DATA_CONFIG_UUID        0x2902
-#define DRONE_BROADCAST_UUID        0x25ec
+#define DRONE_SERVICE_UUID      0x77cc
+#define DRONE_DATA_UUID		0x9a66
+#define DRONE_DATA_CONFIG_UUID  0x2902
+#define DRONE_BROADCAST_UUID    0x25ec
 
 uint8 primary_service_uuid[] = {0x00, 0x28};
 
@@ -245,7 +246,7 @@ void ble_rsp_system_get_info(const struct ble_msg_system_get_info_rsp_t *msg)
 
 void ble_evt_gap_scan_response(const struct ble_msg_gap_scan_response_evt_t *msg)
 {
-
+  return;
   int i = 0;
   char *name = NULL;
 
@@ -266,10 +267,10 @@ void ble_evt_gap_scan_response(const struct ble_msg_gap_scan_response_evt_t *msg
 
 	  rssi[i] = msg->rssi;
 	  printf("i = %d rssi: %d found devices %d\n", i, rssi[i], found_devices_count);
-	  bytes_read = recvfrom(sock, recv_data, 1024, MSG_DONTWAIT, (struct sockaddr *)&client_addr, &addr_len);
-	  sendto(sock, rssi, found_devices_count, MSG_DONTWAIT, (struct sockaddr *)&client_addr, sizeof(client_addr));
+	  //bytes_read = recvfrom(sock, recv_data, 1024, MSG_DONTWAIT, (struct sockaddr *)&client_addr, &addr_len);
+	  sendto(sock, rssi, found_devices_count, MSG_DONTWAIT, (struct sockaddr *)&server_addr, sizeof(server_addr));
   }
-  return;
+
   printf("New device found: ");
 
   // Parse data
@@ -403,7 +404,19 @@ void ble_evt_attclient_find_information_found(const struct ble_msg_attclient_fin
 
 void ble_evt_attclient_attribute_value(const struct ble_msg_attclient_attribute_value_evt_t *msg)
 {
-
+/*
+  PACKSTRUCT(struct ble_msg_attclient_attribute_value_evt_t {
+  uint8 connection;
+  uint16  atthandle;
+  uint8 type;
+  uint8array  value;
+  typedef struct {
+    uint8 len;
+    uint8 data[];
+  } uint8array;
+*/
+  // Number of RSSI 
+  sendto(sock, msg->value.data, msg->value.len, MSG_DONTWAIT, (struct sockaddr *)&server_addr, sizeof(server_addr));
 }
 
 void ble_evt_connection_disconnected(const struct ble_msg_connection_disconnected_evt_t *msg)
@@ -422,7 +435,62 @@ void ble_evt_connection_disconnected(const struct ble_msg_connection_disconnecte
   ble_cmd_gap_connect_direct(&connect_addr, gap_address_type_public, 40, 60, 100, 0);
   //change_state(state_finish);
 }
+void ble_rsp_system_address_get(const struct ble_msg_system_address_get_rsp_t *msg)
+{
+  bd_addr addr12;
+  bd_addr addr13;
+  bd_addr addr14;
 
+  addr12.addr[0] = 0xBA;
+  addr12.addr[1] = 0xAA;
+
+  addr13.addr[0] = 0xD7;
+  addr13.addr[1] = 0xB7;
+
+  addr14.addr[0] = 0x40;
+  addr14.addr[1] = 0xB6;
+
+  addr12.addr[2] = 0x1E;
+  addr12.addr[3] = 0x80;
+  addr12.addr[4] = 0x07;
+  addr12.addr[5] = 0x00;
+
+  addr13.addr[2] = addr12.addr[2];
+  addr13.addr[3] = addr12.addr[3];
+  addr13.addr[4] = addr12.addr[4];
+  addr13.addr[5] = addr12.addr[5];
+
+  addr14.addr[2] = addr12.addr[2];
+  addr14.addr[3] = addr12.addr[3];
+  addr14.addr[4] = addr12.addr[4];
+  addr14.addr[5] = addr12.addr[5];
+
+  connect_addr.addr[5] = 0x00;
+  connect_addr.addr[4] = 0x07;
+  connect_addr.addr[3] = 0x80;
+  connect_addr.addr[2] = 0x2D;
+
+  if (cmp_bdaddr(msg->address, addr12))
+  {
+    connect_addr.addr[1] = 0xD6;
+    connect_addr.addr[0] = 0xBB;
+  }
+  else if (cmp_bdaddr(msg->address, addr13))
+  {
+    connect_addr.addr[1] = 0xE0;
+    connect_addr.addr[0] = 0x4B;
+  }
+
+  else if (cmp_bdaddr(msg->address, addr14))
+  {
+    connect_addr.addr[1] = 0xD6;
+    connect_addr.addr[0] = 0xDF;
+  }
+  else
+    perror("Wrong dongle!");
+
+  ble_cmd_gap_connect_direct(&connect_addr, gap_address_type_public, 16, 32, 100, 9); // Connect bluetooth
+}
 int kbhit(void)
 {
   struct timeval tv;
@@ -436,7 +504,6 @@ int kbhit(void)
 
   select(STDIN_FILENO + 1, &rdfs, NULL, NULL, &tv);
   return FD_ISSET(STDIN_FILENO, &rdfs);
-
 }
 
 int main(int argc, char *argv[])
@@ -450,18 +517,19 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  struct hostent *host = (struct hostent *) gethostbyname((char *)"127.0.0.1");
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(5000);
-  server_addr.sin_addr.s_addr = INADDR_ANY;
+  server_addr.sin_addr = *((struct in_addr*) host->h_addr);//INADDR_ANY;
   bzero(&(server_addr.sin_zero), 8);
 
 
-  if (bind(sock, (struct sockaddr *)&server_addr,
+/*  if (bind(sock, (struct sockaddr *)&server_addr,
            sizeof(struct sockaddr)) == -1) {
     perror("Bind");
     exit(1);
   }
-
+*/
   addr_len = sizeof(struct sockaddr);
 
   // Not enough command-line arguments
@@ -538,7 +606,9 @@ int main(int argc, char *argv[])
   do {
     usleep(500000); // 0.5s
   } while (uart_open(uart_port));
-
+ 
+  ble_cmd_system_address_get();
+  
   /*// Execute action
   if (action == action_scan) {
       ble_cmd_gap_discover(gap_discover_generic);
@@ -549,23 +619,40 @@ int main(int argc, char *argv[])
   else if (action == action_connect) {
       printf("Trying to connect\n");
       change_state(state_connecting);
-      ble_cmd_gap_connect_direct(&connect_addr, gap_address_type_public, 16, 32, 100, 9);
+      ble_cmd_gap_connect_direct(&connect_addr, gap_address_type_public, 16, 32, 100, 9); // Connect bluetooth
   }*/
 
-  ble_cmd_gap_discover(gap_discover_observation);
+  //ble_cmd_gap_set_adv_parameters(0x20, 0x20, 0x07);
+  //ble_cmd_gap_set_scan_parameters(0x40,0x4a,1);
 
-  int counter = 0;
+  //ble_cmd_gap_discover(gap_discover_observation);
+
+  /*struct timeval tm;
+  double time, old_time;
+  gettimeofday(&tm, NULL);
+  time = (double)tm.tv_sec + (double)tm.tv_usec / 1000000.0;
+  old_time = time;*/
+
   // Message loop
   while (1) {
-    if (read_message(UART_TIMEOUT) > 0) { break; }
-    if (counter > 7) {
+    if (read_message(UART_TIMEOUT) > 0) {
+	// ble_cmd_gap_end_procedure();
+	// ble_cmd_gap_set_mode(0x80, gap_scannable_non_connectable);
+    }
+
+/*
+    gettimeofday(&tm, NULL);
+    time = (double)tm.tv_sec + (double)tm.tv_usec / 1000000.0;
+
+    if (time-old_time > 0.09) {
       ble_cmd_gap_end_procedure();
       ble_cmd_gap_set_mode(0x80, gap_scannable_non_connectable);
     }
-    if (counter++ > 8) {
+    if (time-old_time > 0.10) {
       ble_cmd_gap_discover(gap_discover_observation);
-      counter = 0;
-    }
+      old_time = time;
+    }*/
+
     if (kbhit()) {
       getchar();
       break;
