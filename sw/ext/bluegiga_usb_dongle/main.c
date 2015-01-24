@@ -44,7 +44,7 @@ int addr_len, bytes_read;
 char recv_data[1024], send_data[1024];
 struct sockaddr_in server_addr, client_addr;
 
-//#define DEBUG
+#define DEBUG
 
 #define CLARG_PORT 1
 #define CLARG_ACTION 2
@@ -59,7 +59,7 @@ int connected[] = {0, 0, 0, 0, 0, 0, 0, 0};
 signed char rssi[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 int connect_all = 0;
-uint8 MAC_ADDR[] = {0x00, 0x00, 0x1e, 0x80, 0x07, 0x00};//{0x00,0x00,0x2d,0x80,0x07,0x00};
+uint8 MAC_ADDR[] = {0x00, 0x00, 0x2d, 0x80, 0x07, 0x00};//{0x00,0x00,0x2d,0x80,0x07,0x00};
 
 enum actions {
   action_none,
@@ -327,7 +327,7 @@ void ble_evt_connection_status(const struct ble_msg_connection_status_evt_t *msg
     printf("Connected %d\n", msg->connection);
     connected[msg->connection] = 1;
 
-    fprintf(fp, "# %x = %d\n", msg->address.addr[0], msg->connection);
+    //fprintf(fp, "# %x = %d\n", msg->address.addr[0], msg->connection);
 
     // Handle for Drone Data configuration already known
     if (drone_handle_configuration) {
@@ -404,6 +404,7 @@ void ble_evt_attclient_find_information_found(const struct ble_msg_attclient_fin
 
 void ble_evt_attclient_attribute_value(const struct ble_msg_attclient_attribute_value_evt_t *msg)
 {
+printf("Sending data ...");
 /*
   PACKSTRUCT(struct ble_msg_attclient_attribute_value_evt_t {
   uint8 connection;
@@ -417,6 +418,12 @@ void ble_evt_attclient_attribute_value(const struct ble_msg_attclient_attribute_
 */
   // Number of RSSI 
   sendto(sock, msg->value.data, msg->value.len, MSG_DONTWAIT, (struct sockaddr *)&server_addr, sizeof(server_addr));
+
+  struct timeval tm;
+  gettimeofday(&tm, NULL);
+  double time = (double)tm.tv_sec + (double)tm.tv_usec / 1000000.0;
+
+  printf("%.3f: Sent %d bytes\n",time , msg->value.len);
 }
 
 void ble_evt_connection_disconnected(const struct ble_msg_connection_disconnected_evt_t *msg)
@@ -470,24 +477,28 @@ void ble_rsp_system_address_get(const struct ble_msg_system_address_get_rsp_t *m
   connect_addr.addr[3] = 0x80;
   connect_addr.addr[2] = 0x2D;
 
-  if (cmp_bdaddr(msg->address, addr12))
+printf("Connecting to Lisa ");
+  if (!cmp_bdaddr(msg->address, addr12))
   {
     connect_addr.addr[1] = 0xD6;
     connect_addr.addr[0] = 0xBB;
+printf("12: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
   }
-  else if (cmp_bdaddr(msg->address, addr13))
+  else if (!cmp_bdaddr(msg->address, addr13))
   {
     connect_addr.addr[1] = 0xE0;
     connect_addr.addr[0] = 0x4B;
+printf("13: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
   }
 
-  else if (cmp_bdaddr(msg->address, addr14))
+  else if (!cmp_bdaddr(msg->address, addr14))
   {
     connect_addr.addr[1] = 0xD6;
     connect_addr.addr[0] = 0xDF;
+printf("14: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
   }
   else
-    perror("Wrong dongle!");
+    { printf(" none!\n"); perror("Wrong dongle!");  }
 
   ble_cmd_gap_connect_direct(&connect_addr, gap_address_type_public, 16, 32, 100, 9); // Connect bluetooth
 }
