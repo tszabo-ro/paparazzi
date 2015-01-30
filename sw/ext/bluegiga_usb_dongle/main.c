@@ -44,7 +44,7 @@ int addr_len, bytes_read;
 char recv_data[1024], send_data[1024];
 struct sockaddr_in server_addr, client_addr;
 
-#define DEBUG
+//#define DEBUG
 
 #define CLARG_PORT 1
 #define CLARG_ACTION 2
@@ -111,6 +111,8 @@ uint16 drone_handle_start = 0,
        drone_handle_broadcast = 0;
 
 bd_addr connect_addr;
+double 	lastUpdateTime;
+uint16_t updateCount;
 
 FILE *fp;
 
@@ -401,10 +403,10 @@ void ble_evt_attclient_find_information_found(const struct ble_msg_attclient_fin
   }
 }
 
-
+double lastTime2;
 void ble_evt_attclient_attribute_value(const struct ble_msg_attclient_attribute_value_evt_t *msg)
 {
-printf("Sending data ...");
+//printf("Sending data ...");
 /*
   PACKSTRUCT(struct ble_msg_attclient_attribute_value_evt_t {
   uint8 connection;
@@ -423,7 +425,22 @@ printf("Sending data ...");
   gettimeofday(&tm, NULL);
   double time = (double)tm.tv_sec + (double)tm.tv_usec / 1000000.0;
 
-  printf("%.3f: Sent %d bytes\n",time , msg->value.len);
+  if ( (time - lastUpdateTime) > 1)
+  {
+    printf("Data update rate: %.3f Hz\n", ((double)(updateCount))/(time-lastUpdateTime));
+    updateCount = 0;
+    lastUpdateTime = time;
+  }
+  else
+  {
+    if ( (time -lastTime2) > 0.01)
+    {
+      lastTime2 = time;
+      updateCount++;
+    }
+  }
+
+  //printf("%.3f: Sent %d bytes\n",time , msg->value.len);
 }
 
 void ble_evt_connection_disconnected(const struct ble_msg_connection_disconnected_evt_t *msg)
@@ -477,25 +494,25 @@ void ble_rsp_system_address_get(const struct ble_msg_system_address_get_rsp_t *m
   connect_addr.addr[3] = 0x80;
   connect_addr.addr[2] = 0x2D;
 
-printf("Connecting to Lisa ");
+  printf("Connecting to Lisa ");
   if (!cmp_bdaddr(msg->address, addr12))
   {
     connect_addr.addr[1] = 0xD6;
     connect_addr.addr[0] = 0xBB;
-printf("12: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
+    printf("12: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
   }
   else if (!cmp_bdaddr(msg->address, addr13))
   {
     connect_addr.addr[1] = 0xE0;
     connect_addr.addr[0] = 0x4B;
-printf("13: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
+    printf("13: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
   }
 
   else if (!cmp_bdaddr(msg->address, addr14))
   {
     connect_addr.addr[1] = 0xD6;
     connect_addr.addr[0] = 0xDF;
-printf("14: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
+    printf("14: my addr: %X %X\n", msg->address.addr[1], msg->address.addr[0]);
   }
   else
     { printf(" none!\n"); perror("Wrong dongle!");  }
