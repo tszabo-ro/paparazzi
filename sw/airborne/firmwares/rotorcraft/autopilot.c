@@ -180,6 +180,8 @@ static void send_fp(void) {
 
 static void send_bluegps(void)
 {
+  int16_t dEst = (int16_t)(rssiEkf_estimate.v[0]*1000);
+  int16_t vEst = (int16_t)(rssiEkf_estimate.v[1]*1000);
   DOWNLINK_SEND_BLUEGPS(DefaultChannel, DefaultDevice,
                               &(rssi[0]),
                               &(stateGetPositionEnu_i()->x),
@@ -188,7 +190,9 @@ static void send_bluegps(void)
                               &(stateGetSpeedEnu_i()->x),
                               &(stateGetSpeedEnu_i()->y),
                               &(stateGetSpeedEnu_i()->z),
-                              &(stateGetNedToBodyEulers_i()->psi));
+                              &(stateGetNedToBodyEulers_i()->psi),
+                              &(dEst),
+                              &(vEst));
 }
 
 #ifdef RADIO_CONTROL

@@ -1,0 +1,19 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="RSSI2dist" dir="sensors">
+  <doc>
+    <description>Bluegiga RSSI to relative distance fitlering module</description>
+  </doc>
+  <header>
+    <file name="RSSI2dist.h"/>
+  </header>
+  <init fun="RSSI2Dist_init()"/>
+  <periodic fun="RSSI2Dist_periodic()" freq="20"  autorun="TRUE"/>
+  <event fun="RSSI2Dist_event()"/>
+  <makefile>
+    <file name="RSSI2dist.c"/>
+    <file name="../../filters/max_value_filter.c"/>
+    <file name="../../filters/moving_average_filter.c"/>
+  </makefile>
+</module>
+

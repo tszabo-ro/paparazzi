@@ -37,6 +37,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 int sock;
 int addr_len, bytes_read;
@@ -58,7 +59,8 @@ int connected[] = {0, 0, 0, 0, 0, 0, 0, 0};
 signed char rssi[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 int connect_all = 0;
-uint8 MAC_ADDR[] = {0x00, 0x00, 0x1e, 0x80, 0x07, 0x00};//{0x00,0x00,0x2d,0x80,0x07,0x00};
+//uint8 MAC_ADDR[] = {0x00, 0x00, 0x2d, 0x80, 0x07, 0x00};	// Listen only to the lisas
+uint8 MAC_ADDR[] = {0x00, 0x00, 0x1e, 0x80, 0x07, 0x00};	// Listen only to the dongles
 
 enum actions {
   action_none,
@@ -266,8 +268,8 @@ void ble_evt_gap_scan_response(const struct ble_msg_gap_scan_response_evt_t *msg
 
 	  rssi[i] = msg->rssi;
 	  printf("i = %d rssi: %d found devices %d\n", i, rssi[i], found_devices_count);
-	  bytes_read = recvfrom(sock, recv_data, 1024, MSG_DONTWAIT, (struct sockaddr *)&client_addr, &addr_len);
-	  sendto(sock, rssi, found_devices_count, MSG_DONTWAIT, (struct sockaddr *)&client_addr, sizeof(client_addr));
+//	  bytes_read = recvfrom(sock, recv_data, 1024, MSG_DONTWAIT, (struct sockaddr *)&client_addr, &addr_len);
+	  sendto(sock, rssi, found_devices_count, MSG_DONTWAIT, (struct sockaddr *)&server_addr, sizeof(server_addr));
   }
   return;
   printf("New device found: ");
@@ -450,17 +452,19 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  struct hostent *host = (struct hostent *) gethostbyname((char *)"127.0.0.1");
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(5000);
-  server_addr.sin_addr.s_addr = INADDR_ANY;
+  server_addr.sin_addr = *((struct in_addr*) host->h_addr);//INADDR_ANY;
   bzero(&(server_addr.sin_zero), 8);
 
 
-  if (bind(sock, (struct sockaddr *)&server_addr,
+/*  if (bind(sock, (struct sockaddr *)&server_addr,
            sizeof(struct sockaddr)) == -1) {
     perror("Bind");
     exit(1);
   }
+*/
 
   addr_len = sizeof(struct sockaddr);
 
@@ -551,6 +555,9 @@ int main(int argc, char *argv[])
       change_state(state_connecting);
       ble_cmd_gap_connect_direct(&connect_addr, gap_address_type_public, 16, 32, 100, 9);
   }*/
+
+  ble_cmd_gap_set_adv_parameters(0x20, 0x20, 0x07);
+  ble_cmd_gap_set_scan_parameters(0x40,0x4a,1);
 
   ble_cmd_gap_discover(gap_discover_observation);
 
