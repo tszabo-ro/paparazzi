@@ -132,12 +132,12 @@ void bluegiga_com_periodic()
 
   if (bytes_recv > 0) {
     k_rssi = bytes_recv;
-    printf("Paparazzi rssi: ");
+    //printf("Paparazzi rssi: ");
     for (int i = 0; i < k_rssi; i++) {
       rssi[i] = (signed char) recv_data[i];
-      printf("%d ", rssi[i]);
+      //printf("%d ", rssi[i]);
     }
-    printf("\n");
+//    printf("\n");
   }
 
   //uint16_t rx_value = 0x42;

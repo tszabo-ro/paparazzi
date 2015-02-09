@@ -558,7 +558,8 @@ int main(int argc, char *argv[])
 
   ble_cmd_gap_set_adv_parameters(0x20, 0x20, 0x07);
   ble_cmd_gap_set_scan_parameters(0x40,0x4a,1);
-
+//  ble_cmd_hardware_set_txpower(30);
+  
   ble_cmd_gap_discover(gap_discover_observation);
 
   int counter = 0;

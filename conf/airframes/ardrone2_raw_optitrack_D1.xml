@@ -5,7 +5,9 @@
   <firmware name="rotorcraft">
     <target name="ap" board="ardrone2_raw">
       <configure name="HOST" value="192.168.209.234"/>
-      <define name="LINK_HOST" value="\\\"192.168.209.15\\\""/>
+      <define name="LINK_HOST" value="\\\"192.168.209.14\\\""/>
+<!--      <configure name="HOST" value="192.168.0.234"/>
+      <define name="LINK_HOST" value="\\\"192.168.0.101\\\""/>-->
       <define name="AUTOPILOT_DISABLE_AHRS_KILL"/>
       <define name="FAILSAFE_DESCENT_SPEED" value="0.5"/>
       <configure name="USE_MAGNETOMETER" value="0"/>
@@ -33,8 +35,9 @@
   <modules main_freq="512">
 <!--     <load name="../../sw/ext/ardrone2_vision/modules/StereoAvoid/StereoAvoid.xml"/> -->
 <!--     <load name="mission_rotorcraft.xml"/> -->
-    <load name="bluegiga.xml" />
+<!--    <load name="bluegiga.xml" />-->
     <load name="RSSI2dist.xml"/>
+    <load name="BehaviorTree.xml"/>
   </modules>
 
   <commands>

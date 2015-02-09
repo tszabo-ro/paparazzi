@@ -102,10 +102,10 @@
   (_o).v[1] = (_b).m[2]*(_a).v[0] + (_b).m[3]*(_a).v[1];  \
 }
 #define MAT22_TRANSP(_o, _a) {                            \
-  (_o).m[0] = (_a)[0];                                    \
-  (_o).m[1] = (_a)[2];                                    \
-  (_o).m[2] = (_a)[1];                                    \
-  (_o).m[3] = (_a)[3];                                    \
+  (_o).m[0] = (_a.m)[0];                                  \
+  (_o).m[1] = (_a).m[2];                                  \
+  (_o).m[2] = (_a).m[1];                                  \
+  (_o).m[3] = (_a).m[3];                                  \
 }
 #define MAT22_DET(_o, _a) {                               \
   (_o) = (_a).m[0]*(_a).m[3] - (_a).m[1]*(_a).m[2];       \
@@ -117,7 +117,7 @@
   (_o).m[3] = (_m).m[3] * (_c);                           \
 }
 #define MAT22_INV(_o, _a) {                               \
-  double MAT_DET; MAT2_DET(MAT_DET,(_a));                 \
+  double MAT_DET; MAT22_DET(MAT_DET,(_a));                \
   (_o).m[0] =  (_a).m[3]/MAT_DET;                         \
   (_o).m[1] = -(_a).m[1]/MAT_DET;                         \
   (_o).m[2] = -(_a).m[2]/MAT_DET;                         \
@@ -129,21 +129,31 @@
   (_o).m[0] = (_c).m[1]*((_a).m[0]*(_b).m[0] + (_a).m[2]*(_b).m[1]) + (_c).m[3]*((_a).m[0]*(_b).m[2] + (_a).m[2]*(_b).m[3]); \
   (_o).m[0] = (_c).m[1]*((_a).m[1]*(_b).m[0] + (_a).m[3]*(_b).m[1]) + (_c).m[3]*((_a).m[1]*(_b).m[2] + (_a).m[3]*(_b).m[3]); \
 }
+#define MAT22_PRINT(_o) {                               \
+  printf("[%.3f, %.3f]\n[%.3f, %.3f]\n",(_o).m[0],(_o).m[2],(_o).m[1],(_o).m[3]); \ 
+}
 
-#define RSSI_FSL_A                          -66.9866
-#define RSSI_FSL_n                          1.563
+#define RSSI_FSL_A                          -67
+#define RSSI_FSL_n                          2.63
+//#define RSSI_FSL_A                          -62
+//#define RSSI_FSL_n                          3.2
+
 #define RSSI_DIST_SENSOR_SATURATION_RANGE   5
 
 typedef struct FloatVec2Struct
 {
-  float v[2];
+  double v[2];
 } FloatVec2;
 typedef struct FloatMat22Struct
 {
-  float m[4];
+  double m[4];
 } FloatMat22;
 
-FloatVec2  rssiEkf_estimate;
+FloatVec2   rssiEkf_estimate;
+
+extern signed char rssi[];
+extern char k_rssi;
+
 
 extern void RSSI2Dist_init(void);
 extern void RSSI2Dist_periodic(void);
