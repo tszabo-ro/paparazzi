@@ -277,6 +277,16 @@ static void baro_cb(uint8_t __attribute__((unused)) sender_id, const float *pres
 #if USE_GPS
 void ins_update_gps(void) {
   if (gps.fix == GPS_FIX_3D) {
+#if LTP_INIT_FROM_LAT0_LON0
+    if (!ins_impl.ltp_initialized) {
+      struct LlaCoor_i origin_wp_lla = {NAV_LAT0, NAV_LON0, stateGetPositionLla_i()->alt};
+      ltp_def_from_lla_i(&ins_impl.ltp_def, &origin_wp_lla);
+      ins_impl.ltp_def.lla.alt = gps.lla_pos.alt;
+      ins_impl.ltp_def.hmsl = gps.hmsl;
+      ins_impl.ltp_initialized = TRUE;
+      stateSetLocalOrigin_i(&ins_impl.ltp_def);
+    }
+#else
     if (!ins_impl.ltp_initialized) {
       ltp_def_from_ecef_i(&ins_impl.ltp_def, &gps.ecef_pos);
       ins_impl.ltp_def.lla.alt = gps.lla_pos.alt;
@@ -284,6 +294,7 @@ void ins_update_gps(void) {
       ins_impl.ltp_initialized = TRUE;
       stateSetLocalOrigin_i(&ins_impl.ltp_def);
     }
+#endif
 
     struct NedCoor_i gps_pos_cm_ned;
     ned_of_ecef_point_i(&gps_pos_cm_ned, &ins_impl.ltp_def, &gps.ecef_pos);

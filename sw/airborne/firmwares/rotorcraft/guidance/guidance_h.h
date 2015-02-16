@@ -95,6 +95,9 @@ extern int32_t guidance_h_again;
 extern int32_t transition_percentage;
 extern int32_t transition_theta_offset;
 
+extern bool_t behavior_tree_control;
+extern struct Int32Vect2 bt_speed_sp_i;
+
 extern void guidance_h_init(void);
 extern void guidance_h_mode_changed(uint8_t new_mode);
 extern void guidance_h_read_rc(bool_t in_flight);

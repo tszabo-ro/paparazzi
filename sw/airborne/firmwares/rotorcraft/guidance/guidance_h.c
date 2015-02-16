@@ -76,6 +76,7 @@ struct Int32Vect2 guidance_h_speed_ref;
 struct Int32Vect2 guidance_h_accel_ref;
 #if GUIDANCE_H_USE_SPEED_REF
 struct Int32Vect2 guidance_h_speed_sp;
+struct Int32Vect2 bt_speed_sp_i;
 #endif
 struct Int32Vect2 guidance_h_pos_err;
 struct Int32Vect2 guidance_h_speed_err;
@@ -94,6 +95,7 @@ int32_t guidance_h_vgain;
 int32_t transition_percentage;
 int32_t transition_theta_offset;
 
+bool_t behavior_tree_control;
 
 static void guidance_h_update_reference(void);
 static void guidance_h_traj_run(bool_t in_flight);
@@ -177,6 +179,7 @@ void guidance_h_init(void) {
   guidance_h_vgain = GUIDANCE_H_VGAIN;
   transition_percentage = 0;
   transition_theta_offset = 0;
+  behavior_tree_control = false;
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, "GUIDANCE_H_INT", send_gh);
@@ -383,6 +386,8 @@ static void guidance_h_update_reference(void) {
 #if GUIDANCE_H_USE_SPEED_REF
   if(guidance_h_mode == GUIDANCE_H_MODE_HOVER)
     gh_update_ref_from_speed_sp(guidance_h_speed_sp);
+  else if(guidance_h_mode == GUIDANCE_H_MODE_NAV || behavior_tree_control)
+    gh_update_ref_from_speed_sp(bt_speed_sp_i);
   else
 #endif
   gh_update_ref_from_pos_sp(guidance_h_pos_sp);
