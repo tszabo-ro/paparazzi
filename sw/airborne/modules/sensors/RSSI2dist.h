@@ -130,11 +130,11 @@
   (_o).m[0] = (_c).m[1]*((_a).m[1]*(_b).m[0] + (_a).m[3]*(_b).m[1]) + (_c).m[3]*((_a).m[1]*(_b).m[2] + (_a).m[3]*(_b).m[3]); \
 }
 #define MAT22_PRINT(_o) {                               \
-  printf("[%.3f, %.3f]\n[%.3f, %.3f]\n",(_o).m[0],(_o).m[2],(_o).m[1],(_o).m[3]); \ 
+  printf("[%.3f, %.3f]\n[%.3f, %.3f]\n",(_o).m[0],(_o).m[2],(_o).m[1],(_o).m[3]); \
 }
 
-#define RSSI_FSL_A                          -67
-#define RSSI_FSL_n                          2.63
+#define RSSI_FSL_A                          -69
+#define RSSI_FSL_n                          1.28
 //#define RSSI_FSL_A                          -62
 //#define RSSI_FSL_n                          3.2
 
@@ -153,6 +153,10 @@ FloatVec2   rssiEkf_estimate;
 
 extern signed char rssi[];
 extern char k_rssi;
+float rssiFilt;
+float dEstRaw;
+float dEstFilt;
+float fdRelVelEst;
 
 
 extern void RSSI2Dist_init(void);

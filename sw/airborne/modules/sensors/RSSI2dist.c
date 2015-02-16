@@ -167,8 +167,8 @@ void RSSI2Dist_periodic(void)
 //  rssiSum += cRSSI;
 //  sumCount++;
   // Get step the max value RSSI filter
-  float cReading = (float)int_max_value_filter_step(&rssiInputFilter, cRSSI);
-//  float cReading = float_moving_average_filter_step(&rssiInputFilter, cRSSI);
+  rssiFilt = (float)int_max_value_filter_step(&rssiInputFilter, cRSSI);
+//  float rssiFilt = float_moving_average_filter_step(&rssiInputFilter, cRSSI);
   
   // Save the last distance estimate for later
   float lastDistanceEstimate = rssiEkf_State.v[0];
@@ -204,8 +204,8 @@ void RSSI2Dist_periodic(void)
   VEC2_CONST_PROD(K,tmpV1, (1/Ve));               // K = tmpV1*inv(Ve) = (P_kp1_k*transp(Hx_est))*inv(Ve)
 
   // State update
-  VEC2_CONST_PROD(tmpV1, K, (cReading - h_kp1_k));// tmpV1 = K*(cReading - h_kp1_k)
-  VEC2_SUM(rssiEkf_State, rssiEkf_State, tmpV1);  // x_kp1_kp1 = x_k_k + tmpV1 = x_kp1_k + K*(cReading - h_kp1_k)
+  VEC2_CONST_PROD(tmpV1, K, (rssiFilt - h_kp1_k));// tmpV1 = K*(rssiFilt - h_kp1_k)
+  VEC2_SUM(rssiEkf_State, rssiEkf_State, tmpV1);  // x_kp1_kp1 = x_k_k + tmpV1 = x_kp1_k + K*(rssiFilt - h_kp1_k)
     
   // Covariance update
   MAT22_EYE(tmpM1);                               // tmpM1 = I2
@@ -224,21 +224,21 @@ void RSSI2Dist_periodic(void)
   //END: RSSI-Distance model based EKF for estimating the relative distance & velocity
   
   // Estimate the relative velocity via finite-difference & Step the moving average filter
-  float fdRelVelEst = float_moving_average_filter_step(&rssiDistDiffFilter,((rssiEkf_State.v[0] - lastDistanceEstimate)/0.05));
+  fdRelVelEst = float_moving_average_filter_step(&rssiDistDiffFilter,((rssiEkf_State.v[0] - lastDistanceEstimate)/0.05));
   
   // Save the estimated distance & velocity
   rssiEkf_estimate.v[0] = rssiEkf_State.v[0]/RSSI_DIST_SENSOR_SATURATION_RANGE;
   rssiEkf_estimate.v[1] = (fdRelVelEst + (rssiEkf_State.v[1]))/2;
   
-  float dEstUnf = pow(10,(RSSI_FSL_A - cReading)/(10*RSSI_FSL_n));
-  float dEstRaw = pow(10,(RSSI_FSL_A - cRSSI)/(10*RSSI_FSL_n));
+  dEstFilt = pow(10,(RSSI_FSL_A - rssiFilt)/(10*RSSI_FSL_n));
+  dEstRaw = pow(10,(RSSI_FSL_A - cRSSI)/(10*RSSI_FSL_n));
   printf("T: %.3fs - RSSI: %d(%d) / dEst: %.3f (%.3f / %.3f)/ vEst: KF: %.3f/Diff: %.3f/M: %.3f\n", 
     dt, 
-    (int)cReading, 
+    (int)rssiFilt, 
     cRSSI,
     rssiEkf_State.v[0],
     dEstRaw,
-    dEstUnf,
+    dEstFilt,
     rssiEkf_State.v[1],
     fdRelVelEst,
     rssiEkf_estimate.v[1]
