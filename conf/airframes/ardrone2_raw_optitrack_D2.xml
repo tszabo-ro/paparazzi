@@ -209,6 +209,7 @@
     <define name="REF_ZETA" value="0.85"/>
     <define name="REF_MAX_ACCEL" value="5.66"/>
     <define name="REF_MAX_SPEED" value="0.4"/>
+    <define name="USE_SPEED_REF" value="TRUE"/> <!-- Necessary for BT speed control -->
 
     <!-- gains -->
     <define name="PGAIN" value="116"/>
