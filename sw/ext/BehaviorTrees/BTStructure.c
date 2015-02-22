@@ -42,7 +42,7 @@ bool tickNode(void *node, BTNodeType nodeType, BTWorkspace *workspace)
           if ((thisNode->childrenTypes[childIndex] == tBTEmpty) || (thisNode->children[childIndex] == NULL))
             continue;
             
-          if (tickNode(thisNode->children[childIndex], thisNode->childrenTypes[childIndex], workspace))
+          if (tickNode(thisNode->children[childIndex], thisNode->childrenTypes[childIndex], workspace) == true)
             return true;
         }
         
@@ -57,11 +57,11 @@ bool tickNode(void *node, BTNodeType nodeType, BTWorkspace *workspace)
           if ((thisNode->childrenTypes[childIndex] == tBTEmpty) || (thisNode->children[childIndex] == NULL))
             continue;
             
-          if (!tickNode(thisNode->children[childIndex], thisNode->childrenTypes[childIndex], workspace))
+          if (tickNode(thisNode->children[childIndex], thisNode->childrenTypes[childIndex], workspace) == false)
             return false;
         }
         
-        return false;
+        return true;
       }
       break;
     case tBTConditionC:
@@ -94,20 +94,36 @@ bool tickNode(void *node, BTNodeType nodeType, BTWorkspace *workspace)
         }
       }
       case tBTSet:
-        {
-          BTSet *thisNode = (BTSet*)node;
-          if (thisNode->setTypeAbsolute)
-            workspace->wpData[thisNode->wpDataIndex] = thisNode->value;
-          else
-            workspace->wpData[thisNode->wpDataIndex] += thisNode->value;
-            
-          return true;
-        }
+      {
+        BTSet *thisNode = (BTSet*)node;
+        if (thisNode->setTypeAbsolute)
+          workspace->wpData[BTWORKSPACE_NUM_INS + thisNode->wpDataIndex] = thisNode->value;
+        else
+          workspace->wpData[BTWORKSPACE_NUM_INS + thisNode->wpDataIndex] += thisNode->value;
+          
+        return true;
+      }
+      case tBTSetProportional:
+      {
+        BTSetProportional *thisNode = (BTSetProportional*)node;
+        float val = thisNode->G*workspace->wpData[thisNode->wpDataIndex] + thisNode->O;
+        
+        if (val > thisNode->uLim)
+          val = thisNode->uLim;
+        if (val < thisNode->lLim)
+          val = thisNode->lLim;
+          
+        workspace->wpData[BTWORKSPACE_NUM_INS + thisNode->wpDataTo] = val;
+        
+        return true;
+      }
       break;
+      default:
+        perror("Unhandled BTNode type!");
   }
   return false;
 }
 bool tickBT(BehaviorTree *tree, BTWorkspace *workspace)
 {
-  return tickNode(theBehaviorTree.rootNode, theBehaviorTree.rootType, &theBehaviorTreeWorkspaceworkspace);
+  return tickNode(tree->rootNode, tree->rootType, workspace);
 }

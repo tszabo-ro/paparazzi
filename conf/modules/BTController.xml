@@ -1,0 +1,22 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="BTController" dir="BehaviorTrees">
+  <doc>
+    <description>Bluetooth RSSI distance based behavior control for collision avoidance</description>
+  </doc>
+  <header>
+    <file name="BTController.h"/>
+    <file name="BTDefinition.h"/>
+    <file name="BTStructure.h"/>
+  </header>
+  
+  <init fun="initBTCtrl()"/>
+  <periodic fun="periodicBTCtrl()" freq="20"  autorun="TRUE"/>
+  
+  <makefile>
+    <file name="BTDefinition.c"/>
+    <file name="BTStructure.c"/>
+    <file name="BTController.c"/>
+  </makefile>
+</module>
+

@@ -9,7 +9,6 @@
   </header>
   <init fun="RSSI2Dist_init()"/>
   <periodic fun="RSSI2Dist_periodic()" freq="20"  autorun="TRUE"/>
-  <event fun="RSSI2Dist_event()"/>
   <makefile>
     <file name="RSSI2dist.c"/>
     <file name="../../filters/max_value_filter.c"/>

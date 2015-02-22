@@ -33,11 +33,8 @@
   </firmware>
 
   <modules main_freq="512">
-<!--     <load name="../../sw/ext/ardrone2_vision/modules/StereoAvoid/StereoAvoid.xml"/> -->
-<!--     <load name="mission_rotorcraft.xml"/> -->
-<!--    <load name="bluegiga.xml" />-->
     <load name="RSSI2dist.xml"/>
-<!--    <load name="BehaviorTree.xml"/>-->
+    <load name="BTController.xml"/>
   </modules>
 
   <commands>
@@ -167,18 +164,18 @@
     <define name="REF_MAX_Q" value="600." unit="deg/s"/>
     <define name="REF_MAX_QDOT" value="RadOfDeg(8000.)"/>
 
-    <define name="REF_OMEGA_R" value="300" unit="deg/s"/>
+    <define name="REF_OMEGA_R" value="100" unit="deg/s"/>
     <define name="REF_ZETA_R" value="0.9"/>
     <define name="REF_MAX_R" value="400." unit="deg/s"/>
     <define name="REF_MAX_RDOT" value="RadOfDeg(4000.)"/>
 
     <!-- feedback -->
-    <define name="PHI_PGAIN" value="1218"/>
-    <define name="PHI_DGAIN" value="303"/>
+    <define name="PHI_PGAIN" value="700"/>
+    <define name="PHI_DGAIN" value="203"/>
     <define name="PHI_IGAIN" value="120"/>
 
-    <define name="THETA_PGAIN" value="1218"/>
-    <define name="THETA_DGAIN" value="303"/>
+    <define name="THETA_PGAIN" value="700"/>
+    <define name="THETA_DGAIN" value="203"/>
     <define name="THETA_IGAIN" value="120"/>
 
     <define name="PSI_PGAIN" value="529"/>
@@ -213,8 +210,8 @@
     <define name="USE_SPEED_REF" value="TRUE"/> <!-- Necessary for BT speed control -->
 
     <!-- gains -->
-    <define name="PGAIN" value="116"/>
-    <define name="DGAIN" value="60"/>
+    <define name="PGAIN" value="200"/>
+    <define name="DGAIN" value="100"/>
     <define name="IGAIN" value="30"/>
     <define name="VGAIN" value="0"/>
     <define name="AGAIN" value="0"/>

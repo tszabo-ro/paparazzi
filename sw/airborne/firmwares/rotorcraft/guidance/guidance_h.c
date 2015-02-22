@@ -386,7 +386,7 @@ static void guidance_h_update_reference(void) {
 #if GUIDANCE_H_USE_SPEED_REF
   if(guidance_h_mode == GUIDANCE_H_MODE_HOVER)
     gh_update_ref_from_speed_sp(guidance_h_speed_sp);
-  else if(guidance_h_mode == GUIDANCE_H_MODE_NAV || behavior_tree_control)
+  else if(guidance_h_mode == GUIDANCE_H_MODE_NAV && behavior_tree_control)
     gh_update_ref_from_speed_sp(bt_speed_sp_i);
   else
 #endif

@@ -42,9 +42,8 @@
 
 #include <sys/time.h>
 
-int8_max_value_filter       rssiInputFilter;
-float_moving_average_filter rssiDistDiffFilter;
-//float_moving_average_filter rssiInputFilter;
+int8_max_value_filter       rssiInputFilter[RSSI_DIST_SENSOR_MAX_NUM_TRACKED];
+//float_moving_average_filter rssiDistDiffFilter[RSSI_DIST_SENSOR_MAX_NUM_TRACKED];
 
 signed char rssi[8];
 char k_rssi = 0;
@@ -54,9 +53,8 @@ struct sockaddr_in server_addr;
 struct hostent *host;
 char send_data[1024], recv_data[1024];
 
-FloatVec2  rssiEkf_State;
-FloatMat22 rssiEkf_PHI, rssiEkf_GAM, rssiEkf_P, rssiEkf_Q;
-float rssiEkf_R;
+//FloatVec2  rssiEkf_State;
+//FloatMat22 rssiEkf_PHI, rssiEkf_GAM, rssiEkf_P, rssiEkf_Q;
 
 
 unsigned long long lastTime;
@@ -66,14 +64,11 @@ unsigned int sumCount;
 
 void RSSI2Dist_init(void)
 {
-  rssiSum = 0;
-  sumCount = 0;
+/*
 // Set up the filters
   int_max_value_filter_init(&rssiInputFilter,10);
-//  float_moving_average_filter_init(&rssiInputFilter, 10, -65);
   float_moving_average_filter_init(&rssiDistDiffFilter, 5, 0);
-//  int_max_value_filter_init(&rssiInputFilter,10);
-//  float_moving_average_filter_init(&rssiDistDiffFilter, 5, 0);
+
 
   // Initialize the rssi2distance EKF model
   VEC2_ASSIGN(rssiEkf_estimate, 2, 0);              // Initial state estimate
@@ -87,14 +82,19 @@ void RSSI2Dist_init(void)
 //  rssiEkf_GAM.m[0] = 0.1; rssiEkf_GAM.m[1] = 0; rssiEkf_GAM.m[2] = 0;       rssiEkf_GAM.m[3] = 0.1; 
 //  rssiEkf_Q.m[0] = 1;   rssiEkf_Q.m[1] = 0; rssiEkf_Q.m[2] = 0;  rssiEkf_Q.m[3] = 10; 
 //  rssiEkf_P.m[0] = 1;   rssiEkf_P.m[1] = 0; rssiEkf_P.m[2] = 0;  rssiEkf_P.m[3] = 0.1; 
-  /*
-  printf("PHI:\n"); MAT22_PRINT(rssiEkf_PHI);
-  printf("GAM:\n"); MAT22_PRINT(rssiEkf_GAM);
-  printf("Q:\n"); MAT22_PRINT(rssiEkf_Q);
-  printf("P:\n"); MAT22_PRINT(rssiEkf_P);
+
+  rssiEkf_R = 200;*/
   
-  while (1) {};*/
-  rssiEkf_R = 200;
+  
+  // Initialize RSSI EKF
+  for (int i=0; i < RSSI_DIST_SENSOR_MAX_NUM_TRACKED; ++i)
+  {
+    rssiDistEstimates[i] = 2;
+    rssiDistEstimatesP[i] = 1;
+    int_max_value_filter_init(&rssiInputFilter[i],10);
+  }
+  
+  
   lastTime = 0;
   
 // Set up the UDP connection to the Bluegiga app
@@ -147,7 +147,7 @@ void RSSI2Dist_periodic(void)
     return;
     
   // Calculate the time from the last update
-  struct timeval tv;
+/*  struct timeval tv;
   gettimeofday(&tv,NULL);
   
   unsigned long long cTime = tv.tv_sec*1000000 + tv.tv_usec;
@@ -155,7 +155,8 @@ void RSSI2Dist_periodic(void)
 //  MAT22_ASSIGN(rssiEkf_PHI, 1   , dt, 0, 1);
   
   lastTime = cTime;
-  
+*/
+/*
   // Get the highest RSSI reading from the RSSI buffer
   signed char cRSSI = SCHAR_MIN;
   for (uint8_t i=0; i < 8; ++i)
@@ -231,8 +232,8 @@ void RSSI2Dist_periodic(void)
   rssiEkf_estimate.v[1] = (fdRelVelEst + (rssiEkf_State.v[1]))/2;
   
   dEstFilt = pow(10,(RSSI_FSL_A - rssiFilt)/(10*RSSI_FSL_n));
-  dEstRaw = pow(10,(RSSI_FSL_A - cRSSI)/(10*RSSI_FSL_n));
-  printf("T: %.3fs - RSSI: %d(%d) / dEst: %.3f (%.3f / %.3f)/ vEst: KF: %.3f/Diff: %.3f/M: %.3f\n", 
+  dEstRaw = pow(10,(RSSI_FSL_A - cRSSI)/(10*RSSI_FSL_n));*/
+  /*printf("T: %.3fs - RSSI: %d(%d) / dEst: %.3f (%.3f / %.3f)/ vEst: KF: %.3f/Diff: %.3f/M: %.3f\n", 
     dt, 
     (int)rssiFilt, 
     cRSSI,
@@ -242,8 +243,28 @@ void RSSI2Dist_periodic(void)
     rssiEkf_State.v[1],
     fdRelVelEst,
     rssiEkf_estimate.v[1]
-    );
-}
-void RSSI2Dist_event(void)
-{
+    );*/
+    
+    
+  // Estimate distances from RSSI readings
+  printf("Stepping filters: \n");
+  for (int i=0; i < RSSI_DIST_SENSOR_MAX_NUM_TRACKED; ++i)
+  {
+    printf("blip!\n");
+    rssiFilt = (float)int_max_value_filter_step((int8_max_value_filter*)&rssiInputFilter, rssi[i]);
+    
+    // BEGIN: RSSI-Distance model based EKF for estimating the relative distance & velocity
+    float h_kp1_k = RSSI_FSL_A - 10*RSSI_FSL_n*log10(rssiDistEstimates[i]); // h_kp1_k = A - 10n*log10(dist)
+    float Hx      = (-(10*RSSI_FSL_n)/(rssiDistEstimates[i]*log(10)));
+    
+    float P_kp1_k = rssiDistEstimatesP[i] + RSSI_DIST_Q;
+    float Ve      = Hx*P_kp1_k*Hx + RSSI_DIST_R;
+    float K       = P_kp1_k*Hx/Ve;
+    
+    if (i == 0)
+      KGain = K;
+    
+    rssiDistEstimates[i] += K*(rssiFilt - h_kp1_k);
+    rssiDistEstimatesP[i] = (1-K*Hx)*P_kp1_k*(1-K*Hx) + K*RSSI_DIST_R*K;
+  }
 }

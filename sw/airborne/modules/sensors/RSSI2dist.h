@@ -133,12 +133,16 @@
   printf("[%.3f, %.3f]\n[%.3f, %.3f]\n",(_o).m[0],(_o).m[2],(_o).m[1],(_o).m[3]); \
 }
 
-#define RSSI_FSL_A                          -69
+#define RSSI_FSL_A                          -66
 #define RSSI_FSL_n                          1.28
 //#define RSSI_FSL_A                          -62
 //#define RSSI_FSL_n                          3.2
 
 #define RSSI_DIST_SENSOR_SATURATION_RANGE   5
+#define RSSI_DIST_SENSOR_MAX_NUM_TRACKED    2
+
+#define RSSI_DIST_Q                         0.1
+#define RSSI_DIST_R                         25
 
 typedef struct FloatVec2Struct
 {
@@ -149,7 +153,10 @@ typedef struct FloatMat22Struct
   double m[4];
 } FloatMat22;
 
-FloatVec2   rssiEkf_estimate;
+//FloatVec2   rssiEkf_estimate;
+
+float rssiDistEstimates[RSSI_DIST_SENSOR_MAX_NUM_TRACKED];
+float rssiDistEstimatesP[RSSI_DIST_SENSOR_MAX_NUM_TRACKED];
 
 extern signed char rssi[];
 extern char k_rssi;
@@ -157,10 +164,9 @@ float rssiFilt;
 float dEstRaw;
 float dEstFilt;
 float fdRelVelEst;
-
+float KGain;
 
 extern void RSSI2Dist_init(void);
 extern void RSSI2Dist_periodic(void);
-extern void RSSI2Dist_event(void);
 
 #endif

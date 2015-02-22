@@ -28,13 +28,14 @@
 
 #include "inttypes.h"
 #include <stdbool.h>
+#include "math.h"
 
-#define BTWORKSPACE_NUM_INS 4
+#define BTWORKSPACE_NUM_INS 1
 #define BTWORKSPACE_NUM_PAR 0
 #define BTWORKSPACE_NUM_OUT 2
 #define BT_MAX_NUM_NODES    5
 
-typedef enum {tBTSelect, tBTSequence, tBTConditionC, tBTConditionP, tBTSet, tBTEmpty} BTNodeType;
+typedef enum {tBTSelect, tBTSequence, tBTConditionC, tBTConditionP, tBTSet, tBTSetProportional, tBTEmpty} BTNodeType;
 
 typedef struct BehaviorTreeStrtuct
 {
@@ -72,10 +73,22 @@ typedef struct BTSetStruct
   bool        setTypeAbsolute;
 } BTSet;
 
+typedef struct BTSetProportionalStruct
+{
+    int       wpDataIndex;
+    int       wpDataTo;
+    float     G;
+    float     O;
+    
+    float     lLim;
+    float     uLim;
+    
+} BTSetProportional;
 
 extern BehaviorTree theBehaviorTree;
-extern BTWorkspace   theBehaviorTreeWorkspaceworkspace;
-extern void initBT();
-extern bool tickBT();
+extern BTWorkspace   theBehaviorTreeWorkspace;
+
+extern void initBT(BehaviorTree *BT);
+extern bool tickBT(BehaviorTree *tree, BTWorkspace *workspace);
 extern bool tickNode(void *node, BTNodeType nodeType, BTWorkspace *workspace);
 #endif

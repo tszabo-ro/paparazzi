@@ -1,7 +1,7 @@
 <!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
 
 <!-- If the origin of the fligth plan is not correct, change the lat0 en lon0 coordinates -->
-<flight_plan alt="0.5" ground_alt="0" lat0="51.990634" lon0="4.376771" max_dist_from_home="15" name="bluetooth_avoid_drone" security_height="0.1">
+<flight_plan alt="0" ground_alt="0" lat0="51.990634" lon0="4.376771" max_dist_from_home="15" name="bluetooth_avoid_drone" security_height="0.1">
   <header>
 #include "autopilot.h"
 #include "guidance/guidance_h.h"
@@ -14,6 +14,7 @@
     <waypoint name="TD" x="5.6" y="-10.9"/>
     <waypoint name="W0" x="5.6" y="-10.9"/>
     <waypoint name="W1" x="5.6" y="-10.9"/>
+    <waypoint name="CIRCLE" x="0" y="0"/>
     <waypoint lat="51.990635" lon="4.376836" name="FA1"/>
     <waypoint lat="51.990606" lon="4.376760" name="FA2"/>
     <waypoint lat="51.990652" lon="4.376712" name="FA3"/>
@@ -34,7 +35,7 @@
     </block>
     <block name="Geo init">
       <while cond="LessThan(NavBlockTime(), 2)"/>
-      <call fun="NavSetAltitudeReferenceHere()"/>
+      <!--<call fun="NavSetAltitudeReferenceHere()"/>-->
       <call fun="NavSetGroundReferenceHere()"/>
     </block>
     <block name="Holding point">
@@ -56,6 +57,12 @@
       <set value="FALSE" var="behavior_tree_control"/>
       <call fun="NavSetWaypointHere(WP_STDBY)"/>
       <stay wp="STDBY"/>
+    </block>
+    <block name="circle1m">
+      <circle radius="1" wp="CIRCLE"/>
+    </block>
+    <block name="circle3m">
+      <circle radius="3" wp="CIRCLE"/>
     </block>
     <block name="BT_CONTROL">
       <set value="TRUE" var="behavior_tree_control"/>
