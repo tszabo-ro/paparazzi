@@ -95,6 +95,12 @@ void periodicBTCtrl(void)
     psiDotCmd = (-1)*psiDotCmd*DRONE_MAX_PSIDOT;
     
     psiCmd += (psiDotCmd*BTCONTROLLER_DT);
+    
+    while (psiCmd > M_PI)
+      psiCmd -= 2*M_PI;
+    while (psiCmd < -M_PI)
+      psiCmd += 2*M_PI;
+    
   }
   // We are outside of the arena, set the bounceback heading
   else
@@ -115,6 +121,8 @@ void periodicBTCtrl(void)
     float hSP = psiCmd;
     while (hSP < 0)
       hSP += 2*M_PI;
+    while (hSP > 2*M_PI)
+      hSP -= 2*M_PI;
       
     nav_heading = ANGLE_BFP_OF_REAL(hSP);
     

@@ -252,6 +252,8 @@ void RSSI2Dist_periodic(void)
   {
     printf("blip!\n");
     rssiFilt = (float)int_max_value_filter_step((int8_max_value_filter*)&rssiInputFilter, rssi[i]);
+    if (rssiFilt > -60)
+      rssiFilt = -60;
     
     // BEGIN: RSSI-Distance model based EKF for estimating the relative distance & velocity
     float h_kp1_k = RSSI_FSL_A - 10*RSSI_FSL_n*log10(rssiDistEstimates[i]); // h_kp1_k = A - 10n*log10(dist)
@@ -261,8 +263,8 @@ void RSSI2Dist_periodic(void)
     float Ve      = Hx*P_kp1_k*Hx + RSSI_DIST_R;
     float K       = P_kp1_k*Hx/Ve;
     
-    if (i == 0)
-      KGain = K;
+//    if (i == 0)
+//      KGain = K;
     
     rssiDistEstimates[i] += K*(rssiFilt - h_kp1_k);
     rssiDistEstimatesP[i] = (1-K*Hx)*P_kp1_k*(1-K*Hx) + K*RSSI_DIST_R*K;

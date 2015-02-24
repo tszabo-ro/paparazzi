@@ -26,24 +26,24 @@
 #define BTCONTROLLER_H
 
 #define     DRONE_MAX_VCMD          0.3f
-#define     DRONE_MAX_PSIDOT        (20*(M_PI/180))
+#define     DRONE_MAX_PSIDOT        (40*(M_PI/180))
 
 #define     BTCONTROLLER_DT         0.05f
 #define     GEOMETRY_SMALL_NUMBER   0.00000001f
 
 #define     WALL_THREASHOLD         <
 
-#define     AREALIM_P0_X           -5.269f
-#define     AREALIM_P0_Y            0.379f
+#define     AREALIM_P0_X           -4.25f
+#define     AREALIM_P0_Y           -1.02f
 
-#define     AREALIM_P1_X           -0.438f
-#define     AREALIM_P1_Y           -2.469f
+#define     AREALIM_P1_X            0.61f
+#define     AREALIM_P1_Y           -3.79f
 
-#define     AREALIM_P2_X            2.578f
-#define     AREALIM_P2_Y            2.449f
+#define     AREALIM_P2_X            3.65f
+#define     AREALIM_P2_Y            1.16f
 
-#define     AREALIM_P3_X           -2.227f
-#define     AREALIM_P3_Y            5.289f
+#define     AREALIM_P3_X           -1.18f
+#define     AREALIM_P3_Y            3.97f
 
 #define     AL_N0_Y                 (AREALIM_P0_X-AREALIM_P1_X)
 #define     AL_N0_X                 (AREALIM_P1_Y-AREALIM_P0_Y)

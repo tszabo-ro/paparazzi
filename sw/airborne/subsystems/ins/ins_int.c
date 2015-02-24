@@ -279,7 +279,8 @@ void ins_update_gps(void) {
   if (gps.fix == GPS_FIX_3D) {
 #if LTP_INIT_FROM_LAT0_LON0
     if (!ins_impl.ltp_initialized) {
-      struct EcefCoor_i origin_ecef = {392430388, 30035844, 500216321};
+//      struct EcefCoor_i origin_ecef = {392430388, 30035844, 500216321};
+      struct EcefCoor_i origin_ecef =   {392430417, 30035978, 500216197};
       ltp_def_from_ecef_i(&ins_impl.ltp_def, &origin_ecef);
       ins_impl.ltp_def.lla.alt = gps.lla_pos.alt;
       ins_impl.ltp_def.hmsl = gps.hmsl;
