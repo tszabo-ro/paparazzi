@@ -1,0 +1,18 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="monoVisionAvoid" dir="monoVisionAvoid">
+  <doc>
+    <description>Monovular Vision based obstacle avoidance</description>
+  </doc>
+  <header>
+    <file name="monoVisionAvoid.h"/>
+  </header>
+  
+  <init fun="monoVisionAvoid_init()"/>
+  <periodic fun="monoVisionAvoid_periodic()" freq="20"  autorun="TRUE"/>
+  
+  <makefile>
+    <file name="monoVisionAvoid.c"/>
+  </makefile>
+</module>
+

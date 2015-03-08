@@ -30,6 +30,7 @@
     <load name="send_imu_mag_current.xml"/>
     <load name="logger_file.xml"/>
     <load name="cv_opticflow.xml"/>
+    <load name="obstAvoid_monoVision.xml"/>
   </modules>
 
   <commands>
