@@ -1,0 +1,47 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="vision_avoid" dir="vision_avoid">
+  <doc>
+    <description>
+        Obstacle avoidance based on the ARDrone2's front camera
+    </description>
+    <define name="DOWNLINK_VIDEO" value="FALSE" description="Also stream video: warning: this makes the optic flow slow: DEBUGGING only" />
+  </doc>
+
+  <header>
+    <file name="avoid_module.h"/>
+  </header>
+
+  <init fun="opticflow_module_init()"/>
+
+  <periodic fun="opticflow_module_run()" start="opticflow_module_start()" stop="opticflow_module_stop()" autorun="TRUE"/>
+  <makefile target="ap">
+    <define name="ARDRONE_VIDEO_PORT" value="2002" />
+
+    <file name="avoid_module.c"/>
+    <file name="avoid_nav_transportFcns.c" />
+    <file name="opticflow_thread.c" dir="modules/vision_avoid/opticflow"/>
+    <file name="visual_estimator.c" dir="modules/vision_avoid/opticflow"/>
+<!--    <file name="hover_stabilization.c" dir="modules/vision_avoid/opticflow"/>-->
+    <file name="optic_flow_int.c" dir="modules/vision_avoid/cv/opticflow"/>
+    <file name="fastRosten.c" dir="modules/vision_avoid/cv/opticflow/fast9"/>
+    <file name="trig.c" dir="modules/vision_avoid/cv"/>
+    <file name="framerate.c" dir="modules/vision_avoid/cv"/>
+    <file name="jpeg.c" dir="modules/vision_avoid/cv/encoding"/>
+    <file name="rtp.c" dir="modules/vision_avoid/cv/encoding"/>
+    <file name="socket.c" dir="modules/vision_avoid/lib/udp"/>
+    <file name="video.c" dir="modules/vision_avoid/lib/v4l"/>
+    <define name="modules/vision_avoid/cv" type="include"/>
+    <define name="modules/vision_avoid/lib" type="include"/>
+    <define name="pthread" type="raw"/>
+    <define name="__USE_GNU"/>
+    <flag name="LDFLAGS" value="pthread"/>
+    <flag name="LDFLAGS" value="lrt"/>
+    <flag name="LDFLAGS" value="static"/>
+  </makefile>
+  <makefile target="nps">
+    <file name="viewvideo_nps.c"/>
+  </makefile>
+
+</module>
+
