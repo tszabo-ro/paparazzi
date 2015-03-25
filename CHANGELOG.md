@@ -1,3 +1,46 @@
+Paparazzi 5.4.2_stable
+======================
+
+Maintenance release
+
+- GCS: fix undo for list of values
+  [#1054] (https://github.com/paparazzi/paparazzi/issues/1054)
+- lisa_mx: fix secondary spektrum satellite UART AF
+- logalizer: fix csv export after allowing description tag in messages
+- nps: update nps_fdm_jsbsim to be compatible with latest jsbsim
+  [#1118] (https://github.com/paparazzi/paparazzi/pull/1118)
+- rotorcraft: fix attitude flight plan primitive
+  [#1103] (https://github.com/paparazzi/paparazzi/pull/1103)
+- flight plans: fix 'call' statement without loop
+- generators: only include raw makefile part from modules if target matches
+- GCS: GPS accuracy speech less verbose
+  [#1046] (https://github.com/paparazzi/paparazzi/issues/1046)
+- GCS: call index of first/single link "single"
+  [#1098] (https://github.com/paparazzi/paparazzi/issues/1098)
+
+Paparazzi 5.4.1_stable
+======================
+
+Maintenance release
+
+- plot: fix loading of logs with strings that are not representing a float
+- log: prevent display when no points
+  [#897] (https://github.com/paparazzi/paparazzi/issues/897)
+- GCS: disable broken WP reordering in editor
+- GCS: fix last known value was not returned with correct scale for saving
+- paparazzi center: show build/run versions and update help
+- messages: fix hide/show of notebook with multi A/C
+- start.py: properly use Popen to start paparazzi subprocess
+- bebop: actuators left/right reversed and fix NPS config
+- ms5611 barometer peripheral: fix I2C transaction
+- sdlog: call pprzlog_init if needed (and avoid segfault)
+- datalink: fix extra_dl and pprzlog
+- current sensor subsystem shared and not only for fixedwing
+- arch/linux: GCC diagnostic pragma outside of i2c_submit function
+- arch/linux: use same float_abi for linking as for compiling
+- arch/stm32: fix spektrum binding on F4
+  [#780] (https://github.com/paparazzi/paparazzi/issues/780)
+
 Paparazzi 5.4.0_stable
 ======================
 
