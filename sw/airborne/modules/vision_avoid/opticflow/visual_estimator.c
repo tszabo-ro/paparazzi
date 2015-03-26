@@ -297,6 +297,8 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   navTransportData.stateEnuPosY     = info->enuPosY;
   navTransportData.stateEnuHeading  = info->psi;
   
+  navTransportData.stateWpStatus    = (info->targetDist < 0.1f); // Threshold on reaching the target is set to 0.1 meters!
+  
   float peakAngles[10];
   int   numPeaks = 10;
   peakfinder(w, results->flow_count, (int*)&new_x, (int*)&dx, PEAKDETECTOR_THRESHOLD, FOV_W, &numPeaks, (float*)&peakAngles);

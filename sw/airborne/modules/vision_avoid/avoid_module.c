@@ -25,6 +25,7 @@
 
 
 #include "avoid_module.h"
+#include "avoid_nav_transportFcns.h"
 
 // Computervision Runs in a thread
 #include "opticflow/opticflow_thread.h"
@@ -51,9 +52,13 @@ int cv_sockets[2];
 // Downlink
 #include "subsystems/datalink/downlink.h"
 
+// Navigation Routines
+#include "subsystems/navigation/waypoints.h"
 
 
-struct PPRZinfo opticflow_module_data;
+struct PPRZinfo   opticflow_module_data;
+struct EnuCoor_f  currentTargetWPPos;
+float             currentTargetHeading;
 
 /** height above ground level, from ABI
  * Used for scale computation, negative value means invalid.
@@ -110,6 +115,11 @@ void opticflow_module_run(void)
   opticflow_module_data.enuPosX = stateGetPositionEnu_f()->x;
   opticflow_module_data.enuPosX = stateGetPositionEnu_f()->y;
   
+  // Calculate the distance between the current waypoint and the current position
+  float dx = POS_FLOAT_OF_BFP(navigation_target.x) - opticflow_module_data.enuPosX;
+  float dy = POS_FLOAT_OF_BFP(navigation_target.y) - opticflow_module_data.enuPosY;
+  opticflow_module_data.targetDist = sqrt(dx*dx + dy*dy); 
+  
   int bytes_written = write(cv_sockets[0], &opticflow_module_data, sizeof(opticflow_module_data));
   if (bytes_written != sizeof(opticflow_module_data) && errno !=4){
     printf("[module] Failed to write to socket: written = %d, error=%d, %s.\n",bytes_written, errno, strerror(errno));
@@ -131,6 +141,10 @@ void opticflow_module_run(void)
     // Module-Side Code
     ////////////////////////////////////////////
     DEBUG_INFO("[module] Read vision %d\n",vision_results.cnt);
+    
+    currentTargetHeading = vision_results.head_cmd;    
+    currentTargetWPPos.x = vision_results.WP_pos_X;
+    currentTargetWPPos.y = vision_results.WP_pos_Y;
   }
 }
 
@@ -155,4 +169,28 @@ void opticflow_module_start(void)
 void opticflow_module_stop(void)
 {
   computervision_thread_request_exit();
+}
+
+
+// Function to be called from the flight plan!
+bool vision_avoid_update_WP(uint8_t wpID)
+{ 
+  // Move the WP to its target location
+  nav_set_waypoint_enu_f(wpID, (struct EnuCoor_f*)&currentTargetWPPos);
+  
+  // Set the heading of the drone
+  nav_heading = ANGLE_BFP_OF_REAL(currentTargetHeading);
+  
+  // Go to the moved waypoint
+  NavGotoWaypoint(wpID);
+  
+  return true;
+}
+bool markArenaLimsAsWp(uint8_t wpIndex)
+{
+  arenaLimits.X[arenaLimits.arenaLimIndex] = WaypointX(wpIndex);
+  arenaLimits.Y[arenaLimits.arenaLimIndex] = WaypointY(wpIndex);
+  ++arenaLimits.arenaLimIndex;
+  
+  return false;
 }

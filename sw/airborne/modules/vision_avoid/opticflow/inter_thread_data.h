@@ -57,6 +57,8 @@ struct PPRZinfo {
   
   float enuPosX;  // X Position in the ENU frame
   float enuPosY;  // Y Position in the ENU frame
+  
+  float targetDist;
 };
 
 #endif

@@ -40,10 +40,17 @@ struct navTransport
   
   uint8_t stateWpStatus;
 };
+struct arenaLimsENU
+{
+  float X[4];
+  float Y[4];
+  int arenaLimIndex;
+};
+struct arenaLimsENU arenaLimits;
 
 extern struct navTransport navTransportData;
 
-extern void     getArenaLimits(float *limits, int N);
+extern void     getArenaLimits(float *limX, float *limY, int N);
 extern void     setNewWaypointLocation(float posX, float posY, float heading);
 extern void     getCurrentPos(float *X, float *Y, float *heading);
 extern uint8_t  wpReached(void);

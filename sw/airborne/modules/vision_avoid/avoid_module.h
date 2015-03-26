@@ -29,11 +29,14 @@
 #define OPTICFLOW_MODULE_H
 
 #include "std.h"
-
 // Module functions
 extern void opticflow_module_init(void);
 extern void opticflow_module_run(void);
 extern void opticflow_module_start(void);
 extern void opticflow_module_stop(void);
+
+
+extern bool vision_avoid_update_WP(uint8_t wpID);
+extern bool markArenaLimsAsWp(uint8_t wpIndex);
 
 #endif /* OPTICFLOW_MODULE_H */

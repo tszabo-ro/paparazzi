@@ -37,8 +37,14 @@
   
 struct navTransport navTransportData;
 
-void     getArenaLimits(float *limits, int N)
+void     getArenaLimits(float *limX, float *limY, int N)
 {
+  if(N > arenaLimits.arenaLimIndex)
+    N = arenaLimits.arenaLimIndex;
+    
+  int i;
+  for (i=0; i < N; ++i)
+  { limX[i] = arenaLimits.X[i]; limY[i] = arenaLimits.Y[i]; }
 }
 void     setNewWaypointLocation(float posX, float posY, float heading)
 {
