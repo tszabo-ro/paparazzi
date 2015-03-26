@@ -19,6 +19,7 @@
     <define name="ARDRONE_VIDEO_PORT" value="2002" />
 
     <file name="avoid_module.c"/>
+    <file name="peakfinder.c"/>
     <file name="avoid_nav_transportFcns.c" />
     <file name="opticflow_thread.c" dir="modules/vision_avoid/opticflow"/>
     <file name="visual_estimator.c" dir="modules/vision_avoid/opticflow"/>

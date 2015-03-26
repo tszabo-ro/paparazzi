@@ -46,6 +46,8 @@
 // Avoidance headers
 #include "../avoid_nav_transportFcns.h"
 
+// PeakFinder function
+#include "../peakfinder.h"
 
 // Local variables
 struct visual_estimator_struct
@@ -79,6 +81,8 @@ struct visual_estimator_struct
 // Flow Derotation
 #define FLOW_DEROTATION
 
+// Peakdetector Threshold
+#define PEAKDETECTOR_THRESHOLD 0.5
 
 // Called by plugin
 void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *results)
@@ -293,6 +297,9 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   navTransportData.stateEnuPosY     = info->enuPosY;
   navTransportData.stateEnuHeading  = info->psi;
   
+  float peakAngles[10];
+  int   numPeaks = 10;
+  peakfinder(w, results->flow_count, (int*)&new_x, (int*)&dx, PEAKDETECTOR_THRESHOLD, FOV_W, &numPeaks, (float*)&peakAngles);
   avoid_nav_update();
 
   results->WP_pos_X     = navTransportData.currentWpLocationX;

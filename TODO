@@ -7,11 +7,8 @@ DONE: In opticflow_module.c modify the initialization & update of (PPRZinfo opti
   - In opticflow_thread.c change line 78 to /dev/video1 and give the correct w and h, also, if necessary, add image downscaling code here (see example after #ifdef DOWNLINK_VIDEO)
 - In visual_estimator.c: update camera parameters(lines 68-71) & remove code between lines 257 & 274 & replace it with our own stuff that is unavailable at the moment
 
-For Antnov: - DONE
- - Get the arena limits in ENU coordinates aftetr init (X,Y coordinates, 
-no alt, z)
- - Create functions for setting the new WP & heading -> input coordinates 
-in ENU w.r.t. Home WP
- - Create function: uint8_t wp_status() - returning bool. -> whether the 
-current WP has been reached or not.
- - Get position & orientation (ENU!) of the drone.
+For Antnov
+ - Get the arena limits in ENU coordinates aftetr init (X,Y coordinates,  no alt, z)
+DONE: Create functions for setting the new WP & heading -> input coordinates in ENU w.r.t. Home WP
+DONE: Create function: uint8_t wp_status() - returning bool. -> whether the current WP has been reached or not.
+DONE: Get position & orientation (ENU!) of the drone.
