@@ -2,13 +2,13 @@ ToDo for us:
 DONE: Modify (struct CVResult) in inter_thread_data.h to contain the new waypoint location & heading setpoint
 DONE: Modify (struct PPRZinfo) in inter_thread_data.h to contain the current position & heading
 DONE: In opticflow_module.c modify the initialization & update of (PPRZinfo opticflow_module_data) to match the new/modified definition
-	-   In opticflow_module.c replace stateGetNedToBodyEulers_f()->phi by stateGetNedToBodyEulers_f()->psi in line 99
-	-   In opticflow_module.c replace run_hover_stabilization_onvision(&vision_results) (line 122) with a waypoint/heading update function
+DONE: In opticflow_module.c replace stateGetNedToBodyEulers_f()->phi by stateGetNedToBodyEulers_f()->psi in line 99
+DONE: In opticflow_module.c replace run_hover_stabilization_onvision(&vision_results) (line 122) with a waypoint/heading update function
   - In opticflow_thread.c change line 78 to /dev/video1 and give the correct w and h, also, if necessary, add image downscaling code here (see example after #ifdef DOWNLINK_VIDEO)
 - In visual_estimator.c: update camera parameters(lines 68-71) & remove code between lines 257 & 274 & replace it with our own stuff that is unavailable at the moment
 
 For Antnov
- - Get the arena limits in ENU coordinates aftetr init (X,Y coordinates,  no alt, z)
+DONE: Get the arena limits in ENU coordinates aftetr init (X,Y coordinates,  no alt, z)
 DONE: Create functions for setting the new WP & heading -> input coordinates in ENU w.r.t. Home WP
 DONE: Create function: uint8_t wp_status() - returning bool. -> whether the current WP has been reached or not.
 DONE: Get position & orientation (ENU!) of the drone.
