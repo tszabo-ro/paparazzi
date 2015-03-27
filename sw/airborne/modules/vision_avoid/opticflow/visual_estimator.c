@@ -48,6 +48,7 @@
 
 // PeakFinder function
 #include "../peakfinder.h"
+#include "../avoid_nav.h"
 
 // Local variables
 struct visual_estimator_struct
@@ -122,6 +123,9 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
   results->head_cmd     = 0;
   
   framerate_init();
+  
+  init_map();
+  vehicle_cache_init();
 }
 
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
@@ -302,7 +306,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   float peakAngles[10];
   int   numPeaks = 10;
   peakfinder(w, results->flow_count, (int*)&new_x, (int*)&dx, PEAKDETECTOR_THRESHOLD, FOV_W, &numPeaks, (float*)&peakAngles);
-  avoid_nav_update();
+  navigate();
 
   results->WP_pos_X     = navTransportData.currentWpLocationX;
   results->WP_pos_Y     = navTransportData.currentWpLocationY;

@@ -50,11 +50,9 @@ struct arenaLimsENU arenaLimits;
 
 extern struct navTransport navTransportData;
 
-extern void     getArenaLimits(float *limX, float *limY, int N);
+extern void     getArenaLimits(float *coords, int N);
 extern void     setNewWaypointLocation(float posX, float posY, float heading);
 extern void     getCurrentPos(float *X, float *Y, float *heading);
 extern uint8_t  wpReached(void);
-
-extern void     avoid_nav_update(void);
 
 #endif /* OPTICFLOW_MODULE_H */

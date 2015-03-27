@@ -37,14 +37,19 @@
   
 struct navTransport navTransportData;
 
-void     getArenaLimits(float *limX, float *limY, int N)
+void     getArenaLimits(float *coords, int N)
 {
   if(N > arenaLimits.arenaLimIndex)
     N = arenaLimits.arenaLimIndex;
-    
+
+
   int i;
   for (i=0; i < N; ++i)
-  { limX[i] = arenaLimits.X[i]; limY[i] = arenaLimits.Y[i]; }
+//  { limX[i] = arenaLimits.X[i]; limY[i] = arenaLimits.Y[i]; }
+  {
+    coords[i*2+0]=arenaLimits.X[i];
+    coords[i*2+1]=arenaLimits.Y[i];
+  }
 }
 void     setNewWaypointLocation(float posX, float posY, float heading)
 {
@@ -61,8 +66,4 @@ void     getCurrentPos(float *X, float *Y, float *heading)
 uint8_t  wpReached(void) 
 { 
   return navTransportData.stateWpStatus;
-}
-
-void     avoid_nav_update(void)
-{
 }
