@@ -53,7 +53,7 @@ void follow_init(void)
 
 void follow_change_wp(unsigned char *buffer)
 {
-  struct EcefCoor_i new_pos;
+/*  struct EcefCoor_i new_pos;
   struct EnuCoor_i enu;
   new_pos.x = DL_REMOTE_GPS_ecef_x(buffer);
   new_pos.y = DL_REMOTE_GPS_ecef_y(buffer);
@@ -73,5 +73,5 @@ void follow_change_wp(unsigned char *buffer)
   // TODO: Remove the angle to the north
 
   // Move the waypoint
-  VECT3_COPY(waypoints[FOLLOW_WAYPOINT_ID], enu);
+  VECT3_COPY(waypoints[FOLLOW_WAYPOINT_ID], enu);*/
 }
