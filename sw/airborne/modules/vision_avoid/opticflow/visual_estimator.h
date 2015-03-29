@@ -38,4 +38,8 @@
 void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *results);
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults* results);
 
+extern void ImGray2UYVU(unsigned char *frame, unsigned char *grayFrame, int imW, int imH);
+extern void ImUYVU2Gray(unsigned char *grayFrame, unsigned char *frame, int imW, int imH);
+
+extern void ImResizeUYVU(unsigned char *output, int imWOut, int imHOut, unsigned char *input, int imWIn, int imHIn, int downsample);
 #endif /* VISUAL_ESTIMATOR_H */

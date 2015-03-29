@@ -50,6 +50,33 @@
 #include "../peakfinder.h"
 #include "../avoid_nav.h"
 
+#include "resize.h"
+#include "image.h"
+
+// Downlink Video
+#define DOWNLINK_VIDEO 	          1
+#define DEBUG_VIDEO 	            1
+#define DEBUG_MARK_FEATUREPOINTS  1
+#define DEBUG_MARK_FLOWSUM        1
+
+
+#ifdef DOWNLINK_VIDEO
+   #include "encoding/jpeg.h"
+   #include "encoding/rtp.h"
+   struct UdpSocket *vsock;
+
+   uint8_t *downlinkBuffer;
+   uint8_t *downlinkBufferGray;
+#endif
+
+// This will downscale the front camera image from (1280x720) to (320x180)
+//#define IMAGE_DOWNSIZE_FACTOR 4
+#define IMAGE_DOWNSIZE_FACTOR 2
+
+
+
+uint8_t *jpegbuf;
+
 // Local variables
 struct visual_estimator_struct
 {
@@ -57,8 +84,15 @@ struct visual_estimator_struct
   unsigned int imgWidth;
   unsigned int imgHeight;
 
+  unsigned int inFrameWidth;
+  unsigned int inFrameHeight;
+
   // Images
+//  struct img_struct input_frame;
+//  struct img_struct current_frame;
+  uint8_t *current_frame;
   uint8_t *prev_frame;
+
   uint8_t *gray_frame;
   uint8_t *prev_gray_frame;
 
@@ -89,29 +123,24 @@ struct visual_estimator_struct
 void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *results)
 {
   // Initialize variables
-  visual_estimator.imgWidth = w;
-  visual_estimator.imgHeight = h;
+  visual_estimator.inFrameWidth   = w;
+  visual_estimator.inFrameHeight  = h;
 
-  visual_estimator.gray_frame = (unsigned char *) calloc(w * h, sizeof(uint8_t));
-  visual_estimator.prev_frame = (unsigned char *) calloc(w * h * 2, sizeof(uint8_t));
-  visual_estimator.prev_gray_frame = (unsigned char *) calloc(w * h, sizeof(uint8_t));
+// Only the incoming frame has the complete size.
+  w = w / IMAGE_DOWNSIZE_FACTOR;
+  h = h / IMAGE_DOWNSIZE_FACTOR;
+
+  visual_estimator.current_frame    = (uint8_t *)malloc(w * h * 2);
+  visual_estimator.prev_frame       = (uint8_t *)malloc(w * h * 2);
+  visual_estimator.gray_frame       = (unsigned char *) calloc(w * h, sizeof(uint8_t));
+  visual_estimator.prev_gray_frame  = (unsigned char *) calloc(w * h, sizeof(uint8_t));
 
   visual_estimator.old_img_init = 1;
   visual_estimator.prev_pitch = 0.0;
   visual_estimator.prev_roll = 0.0;
 
-/*  results->OFx = 0.0;
-  results->OFy = 0.0;
-  results->dx_sum = 0.0;
-  results->dy_sum = 0.0;
-  results->diff_roll = 0.0;
-  results->diff_pitch = 0.0;
-  results->cam_h = 0.0;
-  results->Velx = 0.0;
-  results->Vely = 0.0;
-  results->flow_count = 0;
-  results->cnt = 0;
-  results->count = 0;*/
+  visual_estimator.imgWidth = w;
+  visual_estimator.imgHeight = h;
 
   results->cnt          = 0;
   results->flow_count   = 0;
@@ -123,16 +152,29 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
   results->head_cmd     = 0;
   
   framerate_init();
-  
+
+// Initialize obstacle map  
   init_map();
   vehicle_cache_init();
+
+
+#ifdef DOWNLINK_VIDEO
+  // Video Compression
+  downlinkBufferGray = (uint8_t *)malloc(w * h);
+  downlinkBuffer     = (uint8_t *)malloc(w * h * 2);
+  jpegbuf            = (uint8_t *)malloc(w * h * 2);
+
+  // Network Transmit
+  vsock = udp_socket("192.168.1.255", 5000, 5001, FMS_BROADCAST);
+#endif
 }
 
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
 {
   // Corner Tracking
   // Working Variables
-  int max_count = 25;
+//  int max_count = 25;
+  int max_count = MAX_COUNT;
   int borderx = 24, bordery = 24;
   int x[MAX_COUNT], y[MAX_COUNT];
   int new_x[MAX_COUNT], new_y[MAX_COUNT];
@@ -141,14 +183,44 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   int w = visual_estimator.imgWidth;
   int h = visual_estimator.imgHeight;
 
+
   // Framerate Measuring
   results->FPS = framerate_run();
 
+  printf("visual_estimator.c: Current FPS: %.2f ",results->FPS);
+
+  // Downsize the image for processing
+  ImResizeUYVU(visual_estimator.current_frame, visual_estimator.imgWidth, visual_estimator.imgHeight, 
+                frame, visual_estimator.inFrameWidth, visual_estimator.inFrameHeight, 
+              IMAGE_DOWNSIZE_FACTOR);
+
+  // Get Grayscale image
+  CvtYUYV2Gray(visual_estimator.gray_frame, visual_estimator.current_frame, w, h);
+
+
+  // Initialize prev_frame & prev_gray_frame to the current frames
   if (visual_estimator.old_img_init == 1) {
     memcpy(visual_estimator.prev_frame, frame, w * h * 2);
-    CvtYUYV2Gray(visual_estimator.prev_gray_frame, visual_estimator.prev_frame, w, h);
+    memcpy(visual_estimator.prev_gray_frame, visual_estimator.gray_frame, w * h);
     visual_estimator.old_img_init = 0;
   }
+
+#ifdef DOWNLINK_VIDEO
+ // Make a copy of the current frame, so we can add stuff to it for debuging
+ memcpy(downlinkBufferGray, visual_estimator.prev_gray_frame, w*h);
+
+/*
+ // Add a dummy white line - test overlay
+ uint8_t *imgPtr = downlinkBufferGray + 100;
+ for (int i=0; i < h; ++i)
+ {
+   *imgPtr      = 255;
+   *(imgPtr+1)  = 255; // Must be at least 2 pixels wide, otherwise doesn't show up after jpeg compression
+   imgPtr       += w;
+ }*/
+#endif
+
+//  #warning !!!!!!!!!!!!!!!!! CORNER DETECTION DISABLED !!!!!!!!!!!!!!!!!!!
 
   // *************************************************************************************
   // Corner detection
@@ -163,6 +235,27 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   for (int i = 0; i < results->count; i++) {
     x[i] = pnts_fast[i].x;
     y[i] = pnts_fast[i].y;
+#ifdef DOWNLINK_VIDEO
+  #ifdef DEBUG_VIDEO
+    #ifdef DEBUG_MARK_FEATUREPOINTS
+
+ // Mark the feature points on the downlinked image as white (255)! (note: 2x2 pixels should be marked, otherwise they disappear after jpeg compression)
+  downlinkBufferGray[w*y[i] + x[i]]   = 0;
+  downlinkBufferGray[w*y[i] + x[i]+1] = 0;
+
+  if (x[i] < (w-2) )
+  {
+    downlinkBufferGray[w*y[i] + x[i] + w]    = 0;
+    downlinkBufferGray[w*y[i] + x[i] + w +1] = 0;
+  }
+  else
+  {
+    downlinkBufferGray[w*y[i] + x[i] + w]    = 0;
+    downlinkBufferGray[w*y[i] + x[i] + w +1] = 0;  
+  }
+    #endif
+  #endif
+#endif
   }
   free(pnts_fast);
 
@@ -200,25 +293,29 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   if (count_fil > max_count) { count_fil = max_count; }
   results->count = count_fil;
 
+//  #warning !!!!!!!!!!!!!!!!! CORNER TRACKING DISABLED !!!!!!!!!!!!!!!!!!!
+
   // *************************************************************************************
   // Corner Tracking
   // *************************************************************************************
-  CvtYUYV2Gray(visual_estimator.gray_frame, frame, w, h);
-
   opticFlowLK(visual_estimator.gray_frame, visual_estimator.prev_gray_frame, x, y,
               count_fil, w, h, new_x, new_y, status, 5, 100);
 
   results->flow_count = count_fil;
-  for (int i = count_fil - 1; i >= 0; i--) {
+  for (int i = count_fil - 1; i >= 0; i--) 
+  {
     int remove_point = 1;
 
     if (status[i] && !(new_x[i] < borderx || new_x[i] > (w - 1 - borderx) ||
-                       new_y[i] < bordery || new_y[i] > (h - 1 - bordery))) {
+                       new_y[i] < bordery || new_y[i] > (h - 1 - bordery))) 
+    {
       remove_point = 0;
     }
 
-    if (remove_point) {
-      for (int c = i; c < results->flow_count - 1; c++) {
+    if (remove_point) 
+    {
+      for (int c = i; c < results->flow_count - 1; c++) 
+      {
         x[c] = x[c + 1];
         y[c] = y[c + 1];
         new_x[c] = new_x[c + 1];
@@ -229,7 +326,8 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   }
 
   // Optical Flow Computation
-  for (int i = 0; i < results->flow_count; i++) {
+  for (int i = 0; i < results->flow_count; i++) 
+  {
     dx[i] = new_x[i] - x[i];
     dy[i] = new_y[i] - y[i];
   }
@@ -305,17 +403,116 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   
   float peakAngles[10];
   int   numPeaks = 10;
-  peakfinder(w, results->flow_count, (int*)&new_x, (int*)&dx, PEAKDETECTOR_THRESHOLD, FOV_W, &numPeaks, (float*)&peakAngles);
-  navigate();
+
+//  peakfinder (int Ncols, int Nflows, int *hPos, int *hFlow, float threshold, float vangle, int *np, float * angle);
+//  peakfinder(w, results->flow_count, (int*)&new_x, (int*)&dx, PEAKDETECTOR_THRESHOLD, FOV_W, &numPeaks, (float*)&peakAngles);
+  
+  float flowSum[w];
+  float maxFlow;
+
+  printf("maxFlowSum: %.2f ", maxFlow);
+  cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum, &maxFlow);
+#ifdef DOWNLINK_VIDEO
+  #ifdef DEBUG_VIDEO
+    #ifdef DEBUG_MARK_FLOWSUM
+  for (int i=0; i < w; ++i)
+  {
+    int mH = (flowSum[w]/maxFlow)*(h-2)+1;
+    downlinkBufferGray[i + mH*w]      = 0;
+    downlinkBufferGray[i + (mH-1)*w]  = 0;  
+    if (i == 0)
+    {
+      downlinkBufferGray[i + mH*w + 1]      = 0;
+      downlinkBufferGray[i + (mH-1)*w + 1]  = 0;  
+    }
+    else
+    {
+      downlinkBufferGray[i + mH*w - 1]      = 0;
+      downlinkBufferGray[i + (mH-1)*w - 1]  = 0;  
+    }
+  }
+    #endif
+  #endif
+#endif
+
+  #warning !!!!!!!!!!!!!!!!!Navigation Disabled in visual_estimator.c!!!!!!!!!!!!!!!!!!!
+  cv_peakFinder((float*)&flowSum, maxFlow, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
+//  navigate();
 
   results->WP_pos_X     = navTransportData.currentWpLocationX;
   results->WP_pos_Y     = navTransportData.currentWpLocationY;
   results->head_cmd     = navTransportData.currentHeadingSetpoint;
+
+#ifdef DOWNLINK_VIDEO
+    // JPEG encode the image:
+//    uint32_t quality_factor = 5; //20 if no resize,
+    uint32_t quality_factor = 20; //20 if no resize,
+    uint8_t dri_header = 0;
+    uint32_t image_format = FOUR_TWO_TWO;  // format (in jpeg.h)
+
+/*    uint8_t *imPos = downlinkBufferGray + 100;
+    for (int i=0; i < h; ++i)
+    {
+      *imPos = 0;
+      imPos += w;
+    }*/
+
+    // Convert back the grayscale image to yuyv as the jpeg encoder expects this format! The color codes are all set to zero (grayscale)
+    ImGray2UYVU(downlinkBuffer, downlinkBufferGray, w, h);
+
+    // Send the small image, not the full-sized one!
+    uint8_t *end = encode_image(downlinkBuffer, jpegbuf, quality_factor, image_format, w, h, dri_header);
+    
+    uint32_t size = end - (jpegbuf);
+
+    //printf("Sending an image ...%u\n", size);
+    send_rtp_frame(vsock, jpegbuf, size, w, h, 0, quality_factor, dri_header, 0);
+#endif
+
+
   // *************************************************************************************
   // Next Loop Preparation
   // *************************************************************************************
 
   memcpy(visual_estimator.prev_frame, frame, w * h * 2);
   memcpy(visual_estimator.prev_gray_frame, visual_estimator.gray_frame, w * h);
+  printf("\n");
+}
+void ImGray2UYVU(unsigned char *frame, unsigned char *grayFrame, int imW, int imH)
+{
+  ++grayFrame;
+  for (int i=0; i < imW*imH; ++i)
+  {
+    *frame++ = 127; 		      // U
+    *frame++ = *grayFrame++; 	// Y
+    ++grayFrame; 		          // <= NO idea why this is necessary!
+  }
+}
+void ImUYVU2Gray(unsigned char *grayFrame, unsigned char *frame, int imW, int imH)
+{
+  for (int i=0; i < imW*imH; ++i)
+  {
+    *grayFrame++ = *frame++;
+    ++frame;
+  }
+}
+void ImResizeUYVU(unsigned char *output, int imWOut, int imHOut, unsigned char *input, int imWIn, int imHIn, int downsample)
+{ // Adapted from resize.h for using the raw image buffers
+  uint8_t *source = input;
+  uint8_t *dest = output;
 
+  int pixelskip = (downsample - 1) * 2;
+  for (int y = 0; y < imHOut; y++) {
+    for (int x = 0; x < imWOut; x += 2) {
+      // YUYV
+      *dest++ = *source++; // U
+      *dest++ = *source++; // Y
+      *dest++ = *source++; // V
+      source += pixelskip;
+      *dest++ = *source++; // Y
+      source += pixelskip;
+    }
+    // read 1 in every 'downsample' rows, so skip (downsample-1) rows after reading the first
+    source += (downsample-1) * imWIn * 2;
+  }
 }

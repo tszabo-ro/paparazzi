@@ -696,7 +696,7 @@ void navigate(void){
         /*printf("best action:%i
          * i+%i,j+%i,o=%f",best,arena.st_wp_i[best],arena.st_wp_j[best],arena.st_headings[best]);*/
         veh.o_disc = best;
-        printf("\n#############%i##############\n",counter);
+//        printf("\n#############%i##############\n",counter); <= WHY would you do this to me? :( ; Tamas
         counter++;
         /*printf("NEW WAYPOINT SET\n");*/
 

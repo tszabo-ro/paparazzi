@@ -144,5 +144,71 @@ void peakfinder (int Ncols, int Nflows, int *hPos, int *hFlow, float threshold, 
 		angle[j] = ((center[j]/(Ncols+2))-0.5)*vangle; // Conversion of the indices to real angles
 	}
 }
+void cv_flowSum(int *hPos, int *hFlow, int NFlows, int NCols, float *flowSum, float *maxFlow)
+{
+// Flow summing code by Tamas with the new data format
+	*maxFlow = 0; // The minimum of the flow sum is 0
+	int i;
+	
+	// Ensure that the flow sum is initially zero at all points
+	for (i=0; i < NCols; ++i)
+  	flowSum[i] = 0;
+  
+  // Add the flow data where exists
+  for (i=0; i < NFlows; ++i)
+    flowSum[hPos[i]] += hFlow[i];
+	
+	// Find Max flow value
+	for (i=0; i < NCols; ++i)
+	  if (*maxFlow < flowSum[i])
+	    *maxFlow = flowSum[i];
 
+}
+void cv_peakFinder(float *flowSum, float maxFlow, int NCols, float threshold, int *np, float *angle, float visualAngle)
+{
+	float left[10], center[10], right[10];
+	float w[NCols+2];
+	
+	int i,j,k;
+	w[0] = 0; // Forcing zero on the begining and end of the new vector to force atleast one peak 
+	
+	for(j=0; j<NCols; j++)
+  	w[j+1] = ( (flowSum[j]/maxFlow) > threshold ); // <= This is faster & cleaner; Tamas
+
+	w[j+1] = 0;
+
+
+	i = 0;
+	k = 0;
+	for(j=0; j<NCols+2; ++j)// ++j is faster than j++; Tamas
+	{
+    if ( (w[j+1] > w[j]) && (i<10) )
+		{
+			left[i]=j; // vector with the index of the "ascending" part of the peak
+			i++;
+		}
+		if ( (w[j+1] < w[j]) && (k<10) )
+		{
+			right[k]=j; // vector with the index of the "descending" part of the peak
+			k++;
+		}
+	}
+	*np = i; // Number of peaks
+	if (i!=10)
+	{
+		//If there is less than 10 peaks, the other part of the vectors will be zero
+		for(j=i; j<10; ++j)
+		{
+			right[j]=0;  
+			left[j]=0;
+		}
+
+	}
+	for(j=0; j<10; ++j)
+	{
+		center[j]=(right[j]+left[j])/2; 
+		angle[j] = ((center[j]/(NCols+2))-0.5)*visualAngle; // Conversion of the indices to real angles
+	}
+
+}
 
