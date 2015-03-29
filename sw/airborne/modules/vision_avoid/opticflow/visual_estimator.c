@@ -56,7 +56,7 @@
 #include "image.h"
 
 // Downlink Video
-//#define DOWNLINK_VIDEO 	          
+#define DOWNLINK_VIDEO 	          
 #define DEBUG_VIDEO 	            1
 #define DEBUG_MARK_FEATUREPOINTS  1
 #define DEBUG_MARK_FLOWSUM        1
@@ -79,7 +79,7 @@
 
 // This will downscale the front camera image from (1280x720) to (320x180)
 //#define IMAGE_DOWNSIZE_FACTOR 4
-#define IMAGE_DOWNSIZE_FACTOR 2
+#define IMAGE_DOWNSIZE_FACTOR 4
 
 
 
@@ -233,8 +233,8 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 
   printf("fP: %d ", results->count);
   // Remove neighboring corners
-  const float min_distance = 0;
-  float min_distance2 = min_distance * min_distance;
+  int min_distance = 5;
+  int min_distance2 = min_distance * min_distance;
 
   unsigned char labelRemove[results->count];
   //Ensure that the labelRemove values are initialized to zero
@@ -246,13 +246,16 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
     if (labelRemove[i]) //The point is already marked to be removed *flies away*
         continue;
 
-    for (int j = 0; j < results->count; j++) 
+    for (int j = i+1; j < results->count; j++) 
     {
       if (labelRemove[j]) //The point is already marked to be removed *flies away*
         continue;
 
       // distance squared:
-      float distance2 = (x[i] - x[j]) * (x[i] - x[j]) + (y[i] - y[j]) * (y[i] - y[j]);
+      int p_dx = pnts_fast[i].x - pnts_fast[j].x;
+      int p_dy = pnts_fast[i].y - pnts_fast[j].y;
+//      float distance2 = (x[i] - x[j]) * (x[i] - x[j]) + (y[i] - y[j]) * (y[i] - y[j]);
+      int distance2 = p_dx*p_dx + p_dy*p_dy;;
       if (distance2 < min_distance2)
         labelRemove[j] = 1;
     }
@@ -425,6 +428,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum, &maxFlow);
   if (maxFlow < 0.001)
     maxFlow = 0.001;
+  cv_smoothAndNormalizeSum(flowSum, w, maxFlow, 20);
 
 #ifdef DOWNLINK_FLOWSUM
   {
@@ -470,7 +474,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 #endif
 
   #warning !!!!!!!!!!!!!!!!!Navigation Disabled in visual_estimator.c!!!!!!!!!!!!!!!!!!!
-  cv_peakFinder((float*)&flowSum, maxFlow, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
+  cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
 //  navigate();
 
   results->WP_pos_X     = navTransportData.currentWpLocationX;

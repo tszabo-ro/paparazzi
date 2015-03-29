@@ -135,7 +135,28 @@ void cv_flowSum(int *hPos, int *hFlow, int NFlows, int NCols, float *flowSum, fl
 	    *maxFlow = flowSum[i];
 
 }
-void cv_peakFinder(float *flowSum, float maxFlow, int NCols, float threshold, int *np, float *angle, float visualAngle)
+void cv_smoothAndNormalizeSum(float *flowSum, int NCols, float maxFlow, unsigned char smootherSize)
+{
+
+  unsigned char halfSize = smootherSize/2;
+  float scale = maxFlow*smootherSize;  
+
+  float out[smootherSize];
+
+  for (int i=0; i < NCols; ++i)
+  {
+    out[i] = 0;
+    for (int j=(i-halfSize); j < (i+halfSize); ++j)
+    {
+      if ( (j >= 0) && (j < NCols) ) // This lowers the values close to the edges of the frame
+        out[i] += flowSum[j];
+    }
+    out[i] /= scale;
+  }
+
+  memcpy(flowSum, &out, NCols*sizeof(float));
+}
+void cv_peakFinder(float *flowSum, int NCols, float threshold, int *np, float *angle, float visualAngle)
 {
 	float left[10], center[10], right[10];
 	float w[NCols+2];
@@ -144,7 +165,7 @@ void cv_peakFinder(float *flowSum, float maxFlow, int NCols, float threshold, in
 	w[0] = 0; // Forcing zero on the begining and end of the new vector to force atleast one peak 
 	
 	for(j=0; j<NCols; j++)
-  	w[j+1] = ( (flowSum[j]/maxFlow) > threshold ); // <= This is faster & cleaner; Tamas
+  	w[j+1] = ( flowSum[j] > threshold );
 
 	w[j+1] = 0;
 
