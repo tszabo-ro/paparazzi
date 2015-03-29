@@ -23,6 +23,9 @@
  *
  */
 
+// Frame Rate (FPS)
+#include <sys/time.h>
 
+extern long time_elapsed(struct timeval *t1, struct timeval *t2);
 void framerate_init(void);
 float framerate_run(void);

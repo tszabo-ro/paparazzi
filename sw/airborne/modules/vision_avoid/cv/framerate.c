@@ -26,9 +26,6 @@
 #include "std.h"
 #include "framerate.h"
 
-// Frame Rate (FPS)
-#include <sys/time.h>
-
 // local variables
 volatile long timestamp;
 struct timeval start_time;
@@ -36,7 +33,7 @@ struct timeval end_time;
 
 #define USEC_PER_SEC 1000000L
 
-static long time_elapsed(struct timeval *t1, struct timeval *t2)
+long time_elapsed(struct timeval *t1, struct timeval *t2)
 {
   long sec, usec;
   sec = t2->tv_sec - t1->tv_sec;

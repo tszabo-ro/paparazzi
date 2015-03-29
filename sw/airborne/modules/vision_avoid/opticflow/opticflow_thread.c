@@ -29,9 +29,10 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include "opticflow_thread.h"
-
+#include "framerate.h"
 
 /////////////////////////////////////////////////////////////////////////
 // COMPUTER VISION THREAD
@@ -45,6 +46,17 @@
 #include <stdio.h>
 #define DEBUG_INFO(X, ...) ;
 
+
+// The (maximum) rate in Hz of the thread
+#define OPTICFLOW_THREAD_RATE 20
+
+#define OPTICFLOW_THREAD_DT_IN_USEC (1000000L/OPTICFLOW_THREAD_RATE)
+
+struct timeval tvOne;
+struct timeval tvTwo;
+
+struct timeval *lastCvTime;
+struct timeval *currentCvTime;
 
 static volatile enum{RUN,EXIT} computer_vision_thread_command = RUN;  /** request to close: set to 1 */
 
@@ -69,7 +81,7 @@ void *computervision_thread_main(void *args)
    */
   // Create a V4L2 device
 //  struct v4l2_device *dev = v4l2_init("/dev/video2", 320, 240, 10);
-  struct v4l2_device *dev = v4l2_init("/dev/video1", 1280, 720, 10);
+  struct v4l2_device *dev = v4l2_init("/dev/video1", 1280, 720, 5);
   if (dev == NULL) {
     printf("Error initialising video\n");
     return 0;
@@ -84,7 +96,31 @@ void *computervision_thread_main(void *args)
   // First Apply Settings before init
   opticflow_plugin_init(dev->w, dev->h, &vision_results);
 
+
+// Limit the rate at which this loop runs
+
+  lastCvTime    = &tvOne;
+  currentCvTime = &tvTwo;
+
+  gettimeofday(lastCvTime, NULL);
+  gettimeofday(currentCvTime, NULL);
+
   while (computer_vision_thread_command == RUN) {
+    // Get the current time
+    gettimeofday(currentCvTime, NULL);
+    if (time_elapsed(lastCvTime, currentCvTime) < OPTICFLOW_THREAD_DT_IN_USEC)
+    {
+      // Check again after 1 millisecond
+      usleep(1000);
+      continue;
+    }
+
+    // Swap the timeval structs
+    {
+      struct timeval *tmp = currentCvTime;
+      currentCvTime       = lastCvTime;
+      lastCvTime          = tmp;
+    }
 
     // Wait for a new frame
     struct v4l2_img_buf *img = v4l2_image_get(dev); 

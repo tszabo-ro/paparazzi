@@ -1,69 +1,39 @@
 #include "peakfinder.h"
 
-/*void valueIndexSort(struct valueIndexPair* data, int N)
-{
-  int i, j;
-  struct valueIndexPair v, t;
-
-  if(N<=1) return;
-
-  // Partition elements
-  v.value = data[0].value;
-  v.index = data[0].index;
-  
-  i = 0;
-  j = N;
-  for(;;)
-  {
-    while(i < N && data[++i].value < v.value) { }
-    while(data[--j].value > v.value) { }
-    
-    if(i >= j) break;
-    
-    t.value = data[i].value; data[i].value = data[j].value; data[j].value = t.value;
-    t.index = data[i].index; data[i].index = data[j].index; data[j].index = t.index;
-  }
-  t.value = data[i-1].value; data[i-1].value = data[0].value; data[0].value = t.value;
-  t.index = data[i-1].index; data[i-1].index = data[0].index; data[0].index = t.index;
-  
-  valueIndexSort(data, i-1);
-  valueIndexSort(data+i, N-i);
-}*/
-
-
-/* Peak finder Function*/
+/*
+// Peak finder Function
 // Note that the optical flow values is an INT, because it corresponds to the number of shifted PIXELS
 void peakfinder (int Ncols, int Nflows, int *hPos, int *hFlow, float threshold, float vangle, int *np, float * angle)
 {
-/*
-  // Code by David: assumes flow to be in matrix format, which is not the case
-   
-	// Inputs: horizontal optical flow matrix, and their dimensions, a threshold, the angle of vision and the pointers for the output
-	// Outputs: number of peaks and a vector with the angle for where are those peaks
-	
-	int j, i, k;
-	float val[cols], aux, aux2, w[cols+2], left[10], center[10], right[10];
-	aux2 = 0;
 
-	for(j=0; j<cols; j++)
-	{
-		aux = 0;	
-		for(i=0; i<rows; i++)
-		{
-			//Makes every value of the horizontal optical flow matrix non-negative (absolute value)
-			if (hflow[i*cols+j] < 0)
-				hflow[i*cols+j] = hflow[i*cols+j]*(-1);  
-			
-			//Sum of every value on the same collumn of the horizontal optical flow matrix
-			aux = aux + hflow[i*cols+j];
-		}
-		//New vector with the sum of each on collumn on each entry
-		val[j] = aux;
-		
-		// Maximum value of any entry of the new vector
-		if (val[j] > aux2)
-			aux2 = val[j];
-	}*/
+//  // Code by David: assumes flow to be in matrix format, which is not the case
+//   
+//	// Inputs: horizontal optical flow matrix, and their dimensions, a threshold, the angle of vision and the pointers for the output
+//	// Outputs: number of peaks and a vector with the angle for where are those peaks
+//	
+//	int j, i, k;
+//	float val[cols], aux, aux2, w[cols+2], left[10], center[10], right[10];
+//	aux2 = 0;
+//
+//	for(j=0; j<cols; j++)
+//	{
+//		aux = 0;	
+//		for(i=0; i<rows; i++)
+//		{
+//			//Makes every value of the horizontal optical flow matrix non-negative (absolute value)
+//			if (hflow[i*cols+j] < 0)
+//				hflow[i*cols+j] = hflow[i*cols+j]*(-1);  
+//			
+//			//Sum of every value on the same collumn of the horizontal optical flow matrix
+//			aux = aux + hflow[i*cols+j];
+//		}
+//		//New vector with the sum of each on collumn on each entry
+//		val[j] = aux;
+//		
+//		// Maximum value of any entry of the new vector
+//		if (val[j] > aux2)
+//			aux2 = val[j];
+//	}
 	
 	
 // Flow summing code by Tamas with the new data format
@@ -94,19 +64,19 @@ void peakfinder (int Ncols, int Nflows, int *hPos, int *hFlow, float threshold, 
 	
 	for(j=0; j<Ncols; j++)
   	w[j+1] = ( (flowVSum[j]/flowMaxVal) > threshold ); // <= This is faster & cleaner; Tamas
-/*	
-  {  	
-		flowVSum[j] = flowVSum[j]/flowMaxVal;
-		
-		//Values greater than the threshold will be 1 (binary)
-		if (flowVSum[j] >= threshold)
-			flowVSum[j] = 1;
-		else
-			flowVSum[j] = 0;
-		
-		w[j+1] = flowVSum[j];
-	}
-*/
+	
+//  {  	
+//		flowVSum[j] = flowVSum[j]/flowMaxVal;
+//		
+//		//Values greater than the threshold will be 1 (binary)
+//		if (flowVSum[j] >= threshold)
+//			flowVSum[j] = 1;
+//		else
+//			flowVSum[j] = 0;
+//		
+//		w[j+1] = flowVSum[j];
+//	}
+
 	w[j+1] = 0;
 
 
@@ -144,6 +114,7 @@ void peakfinder (int Ncols, int Nflows, int *hPos, int *hFlow, float threshold, 
 		angle[j] = ((center[j]/(Ncols+2))-0.5)*vangle; // Conversion of the indices to real angles
 	}
 }
+*/
 void cv_flowSum(int *hPos, int *hFlow, int NFlows, int NCols, float *flowSum, float *maxFlow)
 {
 // Flow summing code by Tamas with the new data format

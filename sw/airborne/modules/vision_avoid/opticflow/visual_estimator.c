@@ -50,19 +50,27 @@
 #include "../peakfinder.h"
 #include "../avoid_nav.h"
 
+#include "encoding/rtp.h"
+
 #include "resize.h"
 #include "image.h"
 
 // Downlink Video
-#define DOWNLINK_VIDEO 	          1
+//#define DOWNLINK_VIDEO 	          
 #define DEBUG_VIDEO 	            1
 #define DEBUG_MARK_FEATUREPOINTS  1
 #define DEBUG_MARK_FLOWSUM        1
 
+#define DEBUG_OVERLAY_COLOR       255
+
+#define DOWNLINK_FLOWSUM 1
+
+#ifdef DOWNLINK_FLOWSUM
+   struct UdpSocket *flowSock;
+#endif
 
 #ifdef DOWNLINK_VIDEO
    #include "encoding/jpeg.h"
-   #include "encoding/rtp.h"
    struct UdpSocket *vsock;
 
    uint8_t *downlinkBuffer;
@@ -111,7 +119,8 @@ struct visual_estimator_struct
 #define Fy_ARdrone 348.5053
 
 // Corner Detection
-#define MAX_COUNT 100
+#define MAX_FEATURE_COUNT 100
+#define MAX_FLOW_COUNT    25
 
 // Flow Derotation
 #define FLOW_DEROTATION
@@ -167,6 +176,9 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
   // Network Transmit
   vsock = udp_socket("192.168.1.255", 5000, 5001, FMS_BROADCAST);
 #endif
+#ifdef DOWNLINK_FLOWSUM
+  flowSock = udp_socket("192.168.1.255", 9000, 9001, FMS_BROADCAST);;
+#endif
 }
 
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
@@ -174,12 +186,11 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   // Corner Tracking
   // Working Variables
 //  int max_count = 25;
-  int max_count = MAX_COUNT;
   int borderx = 24, bordery = 24;
-  int x[MAX_COUNT], y[MAX_COUNT];
-  int new_x[MAX_COUNT], new_y[MAX_COUNT];
-  int status[MAX_COUNT];
-  int dx[MAX_COUNT], dy[MAX_COUNT];
+  int x[MAX_FEATURE_COUNT], y[MAX_FEATURE_COUNT];
+  int new_x[MAX_FEATURE_COUNT], new_y[MAX_FEATURE_COUNT];
+  int status[MAX_FEATURE_COUNT];
+  int dx[MAX_FEATURE_COUNT], dy[MAX_FEATURE_COUNT];
   int w = visual_estimator.imgWidth;
   int h = visual_estimator.imgHeight;
 
@@ -208,19 +219,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 #ifdef DOWNLINK_VIDEO
  // Make a copy of the current frame, so we can add stuff to it for debuging
  memcpy(downlinkBufferGray, visual_estimator.prev_gray_frame, w*h);
-
-/*
- // Add a dummy white line - test overlay
- uint8_t *imgPtr = downlinkBufferGray + 100;
- for (int i=0; i < h; ++i)
- {
-   *imgPtr      = 255;
-   *(imgPtr+1)  = 255; // Must be at least 2 pixels wide, otherwise doesn't show up after jpeg compression
-   imgPtr       += w;
- }*/
 #endif
-
-//  #warning !!!!!!!!!!!!!!!!! CORNER DETECTION DISABLED !!!!!!!!!!!!!!!!!!!
 
   // *************************************************************************************
   // Corner detection
@@ -231,78 +230,109 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   xyFAST *pnts_fast;
   pnts_fast = fast9_detect((const byte *)visual_estimator.prev_gray_frame, w, h, w,
                            fast_threshold, &results->count);
-  if (results->count > MAX_COUNT) { results->count = MAX_COUNT; }
-  for (int i = 0; i < results->count; i++) {
-    x[i] = pnts_fast[i].x;
-    y[i] = pnts_fast[i].y;
+
+  printf("fP: %d ", results->count);
+  // Remove neighboring corners
+  const float min_distance = 0;
+  float min_distance2 = min_distance * min_distance;
+
+  unsigned char labelRemove[results->count];
+  //Ensure that the labelRemove values are initialized to zero
+  for (int i = 0; i < results->count; i++)
+    labelRemove[i] = 0;
+
+  for (int i = 0; i < results->count; i++) 
+  {
+    if (labelRemove[i]) //The point is already marked to be removed *flies away*
+        continue;
+
+    for (int j = 0; j < results->count; j++) 
+    {
+      if (labelRemove[j]) //The point is already marked to be removed *flies away*
+        continue;
+
+      // distance squared:
+      float distance2 = (x[i] - x[j]) * (x[i] - x[j]) + (y[i] - y[j]) * (y[i] - y[j]);
+      if (distance2 < min_distance2)
+        labelRemove[j] = 1;
+    }
+  }
+
+  // Get the first at most MAX_FEATURE_COUNT sparsely spead points (as per labelRemove!)
+  int srcPos  = 0;
+  int destPos = 0;
+  while ( (srcPos < results->count) && (destPos < MAX_FEATURE_COUNT) )
+  {
+    if (!labelRemove[srcPos])
+    {
+      x[destPos] = pnts_fast[srcPos].x;
+      y[destPos] = pnts_fast[srcPos].y;
+
 #ifdef DOWNLINK_VIDEO
   #ifdef DEBUG_VIDEO
     #ifdef DEBUG_MARK_FEATUREPOINTS
 
  // Mark the feature points on the downlinked image as white (255)! (note: 2x2 pixels should be marked, otherwise they disappear after jpeg compression)
-  downlinkBufferGray[w*y[i] + x[i]]   = 0;
-  downlinkBufferGray[w*y[i] + x[i]+1] = 0;
+  downlinkBufferGray[w*y[destPos] + x[destPos]]   = DEBUG_OVERLAY_COLOR;
+  downlinkBufferGray[w*y[destPos] + x[destPos]+1] = DEBUG_OVERLAY_COLOR;
 
-  if (x[i] < (w-2) )
+  if (x[destPos] < (w-2) )
   {
-    downlinkBufferGray[w*y[i] + x[i] + w]    = 0;
-    downlinkBufferGray[w*y[i] + x[i] + w +1] = 0;
+    downlinkBufferGray[w*y[destPos] + x[destPos] + w]    = DEBUG_OVERLAY_COLOR;
+    downlinkBufferGray[w*y[destPos] + x[destPos] + w +1] = DEBUG_OVERLAY_COLOR;
   }
   else
   {
-    downlinkBufferGray[w*y[i] + x[i] + w]    = 0;
-    downlinkBufferGray[w*y[i] + x[i] + w +1] = 0;  
+    downlinkBufferGray[w*y[destPos] + x[destPos] + w]    = DEBUG_OVERLAY_COLOR;
+    downlinkBufferGray[w*y[destPos] + x[destPos] + w +1] = DEBUG_OVERLAY_COLOR;
   }
     #endif
   #endif
 #endif
+
+      ++destPos;
+    }
+    ++srcPos;
   }
+  results->count = destPos;
+
   free(pnts_fast);
 
-  // Remove neighboring corners
-  const float min_distance = 3;
-  float min_distance2 = min_distance * min_distance;
-  int labelmin[MAX_COUNT];
-  for (int i = 0; i < results->count; i++) {
-    for (int j = i + 1; j < results->count; j++) {
-      // distance squared:
-      float distance2 = (x[i] - x[j]) * (x[i] - x[j]) + (y[i] - y[j]) * (y[i] - y[j]);
-      if (distance2 < min_distance2) {
-        labelmin[i] = 1;
-      }
-    }
-  }
-
-  int count_fil = results->count;
-  for (int i = results->count - 1; i >= 0; i--) {
-    int remove_point = 0;
-
-    if (labelmin[i]) {
-      remove_point = 1;
-    }
-
-    if (remove_point) {
-      for (int c = i; c < count_fil - 1; c++) {
-        x[c] = x[c + 1];
-        y[c] = y[c + 1];
-      }
-      count_fil--;
-    }
-  }
-
-  if (count_fil > max_count) { count_fil = max_count; }
-  results->count = count_fil;
 
 //  #warning !!!!!!!!!!!!!!!!! CORNER TRACKING DISABLED !!!!!!!!!!!!!!!!!!!
 
   // *************************************************************************************
   // Corner Tracking
   // *************************************************************************************
-  opticFlowLK(visual_estimator.gray_frame, visual_estimator.prev_gray_frame, x, y,
-              count_fil, w, h, new_x, new_y, status, 5, 100);
+//  opticFlowLK(visual_estimator.gray_frame, visual_estimator.prev_gray_frame, x, y,
+//              count_fil, w, h, new_x, new_y, status, 5, 100);
 
-  results->flow_count = count_fil;
-  for (int i = count_fil - 1; i >= 0; i--) 
+  results->flow_count = results->count;
+
+  opticFlowLK(visual_estimator.gray_frame, visual_estimator.prev_gray_frame, x, y,
+              results->flow_count, w, h, new_x, new_y, status, 5, 100);
+
+  // Remove the invalid points
+  srcPos  = 0;
+  destPos = 0;
+  for (srcPos = 0; srcPos < results->flow_count; ++srcPos)
+  {
+    if (status[srcPos] && !(new_x[srcPos] < borderx || new_x[srcPos] > (w - 1 - borderx) ||
+                 new_y[srcPos] < bordery || new_y[srcPos] > (h - 1 - bordery)))
+    {
+      if (srcPos != destPos) // No point in copying to the same place... is there?
+      {
+        x[destPos]      = x[srcPos];
+        y[destPos]      = y[srcPos];
+        new_x[destPos]  = new_x[srcPos];
+        new_y[destPos]  = new_y[srcPos];
+      }
+      ++destPos;
+    }
+  }
+  results->flow_count = destPos;
+
+/*  for (int i = results->flow_count - 1; i >= 0; i--) 
   {
     int remove_point = 1;
 
@@ -324,7 +354,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
       results->flow_count--;
     }
   }
-
+*/
   // Optical Flow Computation
   for (int i = 0; i < results->flow_count; i++) 
   {
@@ -371,25 +401,6 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   OFy_trans = results->dy_sum;*/
 #endif
 
-  // Average Filter
-/*  OFfilter(&results->OFx, &results->OFy, OFx_trans, OFy_trans, results->flow_count, 1);
-
-  // Velocity Computation
-  if (info->agl < 0.01) {
-    results->cam_h = 0.01;
-  }
-  else {
-    results->cam_h = info->agl;
-  }
-
-  if (results->flow_count) {
-    results->Velx = results->OFy * results->cam_h * results->FPS / Fy_ARdrone + 0.05;
-    results->Vely = -results->OFx * results->cam_h * results->FPS / Fx_ARdrone - 0.1;
-  } else {
-    results->Velx = 0.0;
-    results->Vely = 0.0;
-  }
-*/
 
   // *************************************************************************************
   // This is where the avoidance magic happen!
@@ -410,25 +421,48 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   float flowSum[w];
   float maxFlow;
 
-  printf("maxFlowSum: %.2f ", maxFlow);
+  printf("maxFlowSum: %.2f nF: %d nP: %d ", maxFlow, results->flow_count, results->count);
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum, &maxFlow);
+  if (maxFlow < 0.001)
+    maxFlow = 0.001;
+
+#ifdef DOWNLINK_FLOWSUM
+  {
+    unsigned char numSeg = 20;
+    unsigned char segVals[numSeg];
+
+    int numPixPerSeg = (w/numSeg);
+    for (int seg=0; seg < numSeg; ++seg)
+    {
+      float segSum = 0;
+      for (int px = seg*numPixPerSeg; px < (seg+1)*numPixPerSeg; ++px)
+        segSum += (flowSum[px]/maxFlow);
+      
+      segVals[seg] = (unsigned char)segSum;
+    }
+    
+    if (udp_write(flowSock, (unsigned char*)&segVals, numSeg) != numSeg)
+      printf("UDP write error! ");
+  }
+#endif
+
 #ifdef DOWNLINK_VIDEO
   #ifdef DEBUG_VIDEO
     #ifdef DEBUG_MARK_FLOWSUM
   for (int i=0; i < w; ++i)
   {
     int mH = (flowSum[w]/maxFlow)*(h-2)+1;
-    downlinkBufferGray[i + mH*w]      = 0;
-    downlinkBufferGray[i + (mH-1)*w]  = 0;  
+    downlinkBufferGray[i + mH*w]      = DEBUG_OVERLAY_COLOR;
+    downlinkBufferGray[i + (mH-1)*w]  = DEBUG_OVERLAY_COLOR;
     if (i == 0)
     {
-      downlinkBufferGray[i + mH*w + 1]      = 0;
-      downlinkBufferGray[i + (mH-1)*w + 1]  = 0;  
+      downlinkBufferGray[i + mH*w + 1]      = DEBUG_OVERLAY_COLOR;
+      downlinkBufferGray[i + (mH-1)*w + 1]  = DEBUG_OVERLAY_COLOR;
     }
     else
     {
-      downlinkBufferGray[i + mH*w - 1]      = 0;
-      downlinkBufferGray[i + (mH-1)*w - 1]  = 0;  
+      downlinkBufferGray[i + mH*w - 1]      = DEBUG_OVERLAY_COLOR;
+      downlinkBufferGray[i + (mH-1)*w - 1]  = DEBUG_OVERLAY_COLOR;
     }
   }
     #endif
@@ -449,13 +483,6 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
     uint32_t quality_factor = 20; //20 if no resize,
     uint8_t dri_header = 0;
     uint32_t image_format = FOUR_TWO_TWO;  // format (in jpeg.h)
-
-/*    uint8_t *imPos = downlinkBufferGray + 100;
-    for (int i=0; i < h; ++i)
-    {
-      *imPos = 0;
-      imPos += w;
-    }*/
 
     // Convert back the grayscale image to yuyv as the jpeg encoder expects this format! The color codes are all set to zero (grayscale)
     ImGray2UYVU(downlinkBuffer, downlinkBufferGray, w, h);
