@@ -1,5 +1,11 @@
 #include "avoid_nav.h"
+#include "state.h"
+#include "generated/flight_plan.h"
+#include "../subsystems/navigation/waypoints.h"
+
 #include "avoid_nav_transportFcns.h"
+
+#define OBS_AVOID_ON
 
 void sayhello(void)
 {
@@ -24,6 +30,7 @@ void vec2d_q(vec2d* a) {
 void vec2d_a_q(vec2d* a) {
     vec2d_q(a);
     a->angle = atan2(2*a->q.y*a->q.w,1-2*pow(a->q.y,2));
+    if(isnan(a->angle)) a->angle = PI;
 }
 
 vec2d vec2d_init(float x, float y) {
@@ -192,6 +199,11 @@ void angle_matcher(void){
 
     int dn = arena.dn;
     int sn = arena.sn;
+    printf("Matching sn: %i, dn: %i\n",arena.sn,arena.dn);
+    printarr_float(arena.angles_s,10);
+    printarr_float(arena.angles_d,10);
+
+
     if(dn == 0||sn == 0) return;
 
     float D[sn*dn];
@@ -341,38 +353,37 @@ void print_vec2d(vec2d v) {
 
 /*SIMULATION*/
 #define SIM_TIME 5
-#define SIM_OBSTACLES 2
 
 
-void vehicle_sim_init(void){
+/*void vehicle_sim_init(void){
     v_sim.xy_abs = vec2d_init_o(-2,-6,PI/2+eta);
-    /*printf("Initial orientation%f\n",v_sim.xy_abs.o*180/PI);*/
     v_sim.xy_g = hme2grd_o(&v_sim.xy_abs);
     v_sim.v = arena.dl/4;
-    /*printf("Initial orientation%f\n",v_sim.xy_abs.o*180/PI);*/
-}
-obstacle sim_obstacle[SIM_OBSTACLES];
+}*/
 
-void obstacle_sim_init(void){
-    sim_obstacle[0].xy = vec2d_init(lside/2+0.1,0);
-    sim_obstacle[1].xy = vec2d_init(lside/2+0.1,lside/2);
-}
+/*void obstacle_sim_init(void){
+    sim_obstacle[0].xy = vec2d_init(0,3);
+    sim_obstacle[1].xy = vec2d_init(3,3);
+    sim_obstacle[2].xy = vec2d_init(6,6);
+}*/
 
-void vehicle_sim(void){
+/*void vehicle_sim(void){
     vec2d v_dest = vec2d_sub(&v_sim.xy_abs,&v_sim.wp_abs);
     vec2d v_vel = vec2d_norm(v_dest);
 
     v_sim.xy_abs.x += v_sim.v*v_vel.x;
     v_sim.xy_abs.y += v_sim.v*v_vel.y;
     v_sim.xy_g = hme2grd_o(&v_sim.xy_abs);
-}
+}*/
 
+
+
+#ifndef OBS_AVOID_ON
 void obstacle_sim_return_angle(float vv[],int *n){
     int i;
 
     vec2d tmp;
     for(i=0;i<SIM_OBSTACLES;i++){
-
         tmp = vec2d_sub(&v_sim.xy_g,&sim_obstacle[i].xy);
         vec2d_a_q(&tmp);
         vv[i] = v_sim.xy_g.o-tmp.angle;
@@ -380,15 +391,8 @@ void obstacle_sim_return_angle(float vv[],int *n){
     *n = SIM_OBSTACLES;
     for(i=SIM_OBSTACLES;i<OBS_SLOTS;i++) vv[i] = NAN;
 }
-
-/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-/*SIMULATION END*/
-/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-/*TAMAS FUNCTION SIMS*/
-/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-
 void request_arena_coord(float *coord){
-    /*float map_borders[4][2] = {
+    float map_borders[4][2] = {
         {-2,-6},
         {6,-2},
         {2,6},
@@ -400,44 +404,107 @@ void request_arena_coord(float *coord){
             for(j=0;j<2;j++){
                 coord[i*2+j]=map_borders[i][j];
             }
-        }*/
-    getArenaLimits(coord, 4);
+        }
+    
 }
-void request_position_abs(float *loc,float *orient){
-/*    loc[0] = v_sim.xy_abs.x;
-    loc[1] = v_sim.xy_abs.y;
-    *orient = v_sim.xy_abs.o;*/
-  getCurrentPos(&loc[0], &loc[1], orient);  
+void request_position_abs(void){
+    veh.xy_abs = v_sim.xy_abs;
+    
 
 }
 void set_wp(float loc[], float *orient){
-/*    v_sim.wp_abs.x = loc[0];
+    v_sim.wp_abs.x = loc[0];
     v_sim.wp_abs.y = loc[1];
-    v_sim.xy_abs.o = *orient;    */
-    setNewWaypointLocation(loc[0], loc[1], *orient);
+    v_sim.xy_abs.o = *orient;    
 }
 
 
 int wp_status(void){
-/*    float range = vec2d_dist(&v_sim.xy_abs,&v_sim.wp_abs);
+    float range = vec2d_dist(&v_sim.xy_abs,&v_sim.wp_abs);
     if (range < arena.dl/10){
         return 1;
     }else{
         return 0;
-    }*/
-    return wpReached();
+    }
 }
 
-/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-/*TAMAS FUNCTIONS END*/
-/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+void obstacle_sim_return_angle(float vv[],int *n){
+    int i;
+
+    vec2d tmp;
+    for(i=0;i<SIM_OBSTACLES;i++){
+
+
+        tmp = vec2d_sub(&veh.xy_g,&sim_obstacle[i].xy);
+        vec2d_a_q(&tmp);
+        vv[i] = veh.xy_g.o-tmp.angle;
+    }
+    *n = SIM_OBSTACLES;
+    for(i=SIM_OBSTACLES;i<OBS_SLOTS;i++) vv[i] = NAN;
+   
+}
+#else
+void request_arena_coord(float *coord){
+    struct EnuCoor_f arena_corner[4];
+    struct EnuCoor_i arena_corner_i[4];
+    printf("Reading arena limits...\n");
+    VECT3_COPY(arena_corner[0],waypoints[WP_FA2].enu_f);
+    VECT3_COPY(arena_corner[1],waypoints[WP_FA1].enu_f);
+    VECT3_COPY(arena_corner[2],waypoints[WP_FA4].enu_f);
+    VECT3_COPY(arena_corner[3],waypoints[WP_FA3].enu_f);
+    VECT3_COPY(arena_corner_i[0],waypoints[WP_FA2].enu_i);
+    VECT3_COPY(arena_corner_i[1],waypoints[WP_FA1].enu_i);
+    VECT3_COPY(arena_corner_i[2],waypoints[WP_FA4].enu_i);
+    VECT3_COPY(arena_corner_i[3],waypoints[WP_FA3].enu_i);
+    int i;
+    for(i=0;i<4;i++){
+        printf("Point %i: %.3f,%.3f ",i,arena_corner[i].x,arena_corner[i].y);
+    }
+    printf(" OK\n");
+    for(i=0;i<4;i++){
+        printf("Point %i: %i,%i ",i,arena_corner_i[i].x,arena_corner_i[i].y);
+    }
+    printf(" OK\n");
+
+    for(i=0;i<4;i++){
+        coord[i*2]=arena_corner[i].x;
+        coord[i*2+1]=arena_corner[i].y;
+    }
+    
+}
+void request_position_abs(void){
+    veh.xy_abs.x = state.enu_pos_f.x;
+    veh.xy_abs.y = state.enu_pos_f.y; 
+    float psi = stateGetNedToBodyEulers_f()->psi;
+    veh.xy_abs.o = (psi <-0.5*PI ) ? -1.5*PI-psi:0.5*PI-psi;
+
+    
+
+}
+void set_wp(float loc[], float *orient){
+    veh.wp_abs.x = loc[0];
+    veh.wp_abs.y = loc[1];
+    veh.wp_abs.o = *orient;
+}
+
+
+int wp_status(void){
+    float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
+    if (range < 1){
+        return 1;
+    }else{
+        return 0;
+    }
+}
+
+#endif
+
 void set_discrete_wp(int i, int j, float orient){
     vec2d wp;
     wp.x = arena.gridx_coord[i];
     wp.y = arena.gridy_coord[j];
-    /*printf("wp set at %f,%f\n",wp.x,wp.y);*/
+    wp.o = orient;
 
-    wp.o = 0;
 
     wp = grd2hme_o(&wp);
 
@@ -448,50 +515,56 @@ void set_discrete_wp(int i, int j, float orient){
 
 
     set_wp(loc,&o);
-    veh.xy_abs.o = o;
+    /*veh.xy_abs.o = o;*/
 }
 
-void request_obstacles(float *v,int *n){
+void request_obstacles(float *v,int *n)
+{
 
-    obstacle_sim_return_angle(v,n);
-
+//    obstacle_sim_return_angle(v,&nn);
+//    *n = nn;
+  memcpy(v, flowPeaks.angles,flowPeaks.nAngles*sizeof(float));
+  *n = flowPeaks.nAngles;
 }
 
 
 
 
 
-void request_position(vec2d *loc, float *orient){
+/*void request_position(vec2d *loc, float *orient){*/
+void request_position(void){
 
 
-    float lc[2];
-    float o;
+    /*float lc[2];*/
+    /*float o;*/
 
-    request_position_abs(lc,&o);
+    request_position_abs();
 
-    veh.xy_abs = vec2d_init_o(lc[0],lc[1],o);
+    /*veh.xy_abs = vec2d_init_o(lc[0],lc[1],o);*/
     veh.xy_g = hme2grd_o(&veh.xy_abs);
 
-    *loc = veh.xy_g;
-    *orient = veh.xy_g.o;
+    /**loc = veh.xy_g;*/
+    /**orient = veh.xy_g.o;*/
 
     /**loc = sim_vehxy[sim_timestep];*/
     /**orient = sim_veho[sim_timestep];*/
 }
 void set_disc_o(void){
-    int i;
+    /*int i;
     float tmp=0;
     float min=INFINITY;
-    int o_disc;
+    int o_disc = 0;
     for (i=0;i<8;i++){
-        tmp = abs(veh.xy_g.o-arena.st_headings[i]);
+        tmp = fabs(veh.xy_g.o-arena.st_headings[i]);
+        //printf("%.3f\n",tmp);
         if(tmp<min) {
             o_disc = i;
+            min = tmp;
         }
 
-    }
+    }*/
     
-    printf("discrete orient:%i\n",o_disc);
+    /*printf("discrete orient:%i\n",o_disc);*/
 }
 void vehicle_place_on_grid(void){
 
@@ -504,7 +577,8 @@ void vehicle_place_on_grid(void){
 
 
 }
-void obstacle_add(vec2d loc, float orient, float gamma){
+void obstacle_add(float gamma){
+
     int i = 0;
     int freeslot = -1;
     while(freeslot==-1&&i<OBS_SLOTS){
@@ -513,33 +587,51 @@ void obstacle_add(vec2d loc, float orient, float gamma){
     }
     arena.angles_s[freeslot]=gamma;
     arena.free_slots[freeslot] = 0;
-    arena.obs[freeslot].orig = loc;
-    arena.obs[freeslot].gamma_orig = orient-gamma;
+    arena.obs[freeslot].orig = veh.xy_g;
+    arena.obs[freeslot].gamma_orig = veh.xy_g.o-gamma;
     arena.obs[freeslot].n_tracked = 0;
-    arena.obs[freeslot].xy = vec2d_init(0,0);
+    arena.obs[freeslot].xy = vec2d_init(lside,lside);
+    arena.obs[freeslot].err = INFINITY;
     arena.sn++;
+    printf("Obstacle added gamma: %.3f slot: %i\n",gamma,freeslot);
 }
 void obstacle_destroy(int i){
+
     arena.angles_s[i] = NAN;
     arena.free_slots[i] = 1;
     arena.sn--;
     obstacle obs;
+    obs.err = INFINITY;
     arena.obs[i]=obs;
+    printf("Obstacle destroyed slot: %i\n",i);
 }
-void obstacle_update(vec2d loc, float orient, float gamma, int i){
-    arena.obs[i].upd = loc;
-    arena.obs[i].gamma_upd = orient-gamma;
-    vec2d xy_n = vec2d_triangulate(&arena.obs[i].orig,&arena.obs[i].upd,arena.obs[i].gamma_orig,arena.obs[i].gamma_upd);
-    vec2d *xy_p = &arena.obs[i].xy;
-    int n = arena.obs[i].n_tracked;
-    arena.obs[i].xy = vec2d_init((xy_n.x+xy_p->x)/(1+n),(xy_n.y+xy_p->y)/(1+n));
+void obstacle_update(float gamma, int i){
+
+    float spread = vec2d_dist(&veh.xy_g,&arena.obs[i].orig);
+    /*if(loc.x!=arena.obs[i].orig.x&&loc.y!=arena.obs[i].orig.y){*/
+
+
+    arena.obs[i].upd = veh.xy_g;
+    arena.obs[i].gamma_upd = veh.xy_g.o-gamma;
     arena.angles_s[i] = gamma;
-    arena.obs[i].n_tracked++;
+    if(spread>MIN_SPREAD){
+        vec2d xy_n = vec2d_triangulate(&arena.obs[i].orig,&arena.obs[i].upd,arena.obs[i].gamma_orig,arena.obs[i].gamma_upd);
+        vec2d *xy_p = &arena.obs[i].xy;
+        int kk = arena.obs[i].n_tracked;
+        arena.obs[i].xy = vec2d_init((xy_n.x+xy_p->x*kk)/(1+kk),(xy_n.y+xy_p->y*kk)/(1+kk));
 
-    arena.obs[i].err = vec2d_dist(&xy_n,xy_p);
+        arena.obs[i].n_tracked++;
+
+        arena.obs[i].err = vec2d_dist(&xy_n,xy_p);
+        printf("(%.2f,%.2f),(%.2f,%.2f)\n",arena.obs[i].orig.x,arena.obs[i].orig.y,arena.obs[i].upd.x,arena.obs[i].upd.y);
+        printf("curr at: %.3f,%.3f\n",xy_n.x,xy_n.y);
+        printf("prev at: %.3f,%.3f\n",xy_p->x,xy_p->y);
+        printf("new at: %.3f,%.3f\n",arena.obs[i].xy.x,arena.obs[i].xy.y);
+    printf("Obstacle updated gamma: %.3f slot: %i\n",gamma,i);
+    }
 
 
-    if(arena.obs[i].err<MAXERROR){
+    if(arena.obs[i].err<MAXERROR&&spread>MIN_SPREAD){
         int loc_x;
         int loc_y;
 
@@ -550,22 +642,23 @@ void obstacle_update(vec2d loc, float orient, float gamma, int i){
             loc_y = floor(arena.obs[i].xy.y/arena.dl);
 
             int m;
-            int k;
+            int n;
             vec2d gridlock;
             float dist;
             int loc_w;
             float sig;
 
             for(m=-1;m<3;m++){
-                for(k=-1;k<3;k++){
+                for(n=-1;n<3;n++){
                     loc_x_tmp = loc_x+m;
-                    loc_y_tmp = loc_y+k;
+                    loc_y_tmp = loc_y+n;
 
                     if(loc_x_tmp>=0&&loc_y_tmp>=0&&loc_x_tmp<GRID_RES&&loc_y_tmp<GRID_RES){
                         vec2d_set(&gridlock,arena.gridx_coord[loc_x_tmp],arena.gridy_coord[loc_y_tmp]);
                         dist = vec2d_dist(&gridlock,&arena.obs[i].xy);
                         loc_w = loc_x_tmp*GRID_RES+loc_y_tmp;
                         sig = MAXSCORE/(1+exp(dist*arena.dl12-12));
+                        /*sig = 100;*/
 
 
                         arena.grid_weights_obs[loc_w]=\
@@ -574,9 +667,9 @@ void obstacle_update(vec2d loc, float orient, float gamma, int i){
                     }
                 }
             }
-            /*printf("MATCH FOUND\n");*/
+            printf("MATCH FOUND\n");
             obstacle_destroy(i);
-            /*obstacle_add(loc,orient,gamma);            */
+            obstacle_add(gamma);            
         }
         else{
             obstacle_destroy(i);
@@ -640,19 +733,20 @@ void plan_action(int i_loc, int j_loc, int head,int *best,float *q){
     /*printf("best action is %i\nmove from %i,%i to %i,%i\n",*best,i_loc,j_loc,i_loc+arena.st_wp_i[*best],j_loc+arena.st_wp_j[*best]);*/
 }
 
-void move(void){}
+/*void move(){}*/
 
-void arena_update(float v[],int n,vec2d v_xy,float orient){
+void arena_update(float v[],int n){
     /*printarr_float(v,OBS_SLOTS);*/
     /*printf("%i",n);*/
-    /*arena_report();*/
+
+    printf("arena_update v:%.3f n:%i\n",v[0],n);
     int i;
     int j;
     if(n>0){
         if(arena.sn == 0){
             for(i=0;i<OBS_SLOTS;i++){
                 if (!isnan(v[i])){
-                    obstacle_add(v_xy,orient,v[i]);
+                    obstacle_add(v[i]);
 
                 }
             }
@@ -661,28 +755,30 @@ void arena_update(float v[],int n,vec2d v_xy,float orient){
             }
         }
         else{
+            arena_report();
             for(j=0;j<OBS_SLOTS;j++)arena.angles_d[j] = v[j];
             arena.dn = n;
             angle_matcher();
+
             for(i = 0;i<arena.n_drops;i++) obstacle_destroy(arena.drop[i]);
-            for(i=0;i<arena.n_new;i++) obstacle_add(v_xy,orient,v[arena.new[i]]);
-            for(i=0;i<arena.n_matches;i++) obstacle_update(v_xy,orient,v[arena.matches_d[i]],arena.matches_s[i]);
+            for(i=0;i<arena.n_new;i++) obstacle_add(v[arena.new[i]]);
+            for(i=0;i<arena.n_matches;i++) obstacle_update(v[arena.matches_d[i]],arena.matches_s[i]);
         }
     }
 
 }
-int counter;
 void navigate(void){
+    request_position();
     float vision_tmp[OBS_SLOTS];
     int n_tmp = 0;
     request_obstacles(vision_tmp,&n_tmp);
+    printf("navigate() v: %.3f n:%i\n",vision_tmp[0],n_tmp);
 
-    vec2d v_xy;
-    float o;
-    request_position(&v_xy,&o);
 
-    if(wp_status()==1){
-        /*vehicle_place_on_grid();*/
+
+    float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
+
+    if(range<0.7){
         int best;
         float q;
         plan_action(veh.gridij[0],veh.gridij[1],veh.o_disc,&best,&q);
@@ -693,26 +789,28 @@ void navigate(void){
 
         set_discrete_wp(new_i,new_j,arena.st_headings[best]);
         arena.grid_weights_exp[new_i*GRID_RES+new_j]++;
-        /*printf("best action:%i
-         * i+%i,j+%i,o=%f",best,arena.st_wp_i[best],arena.st_wp_j[best],arena.st_headings[best]);*/
         veh.o_disc = best;
-//        printf("\n#############%i##############\n",counter); <= WHY would you do this to me? :( ; Tamas
-        counter++;
-        /*printf("NEW WAYPOINT SET\n");*/
+        printf("\n#############%i##############\n",counter_nav);
+        counter_nav++;
+
 
         return;
 
     }
-    arena_update(vision_tmp,n_tmp,v_xy,o);
+
+
+
+    arena_update(vision_tmp,n_tmp);
 }
 
 
 void vehicle_cache_init(void){
-    vec2d loc;
-    float orient;
-    request_position(&loc,&orient);
+    request_position();
     vehicle_place_on_grid();
     set_discrete_wp(veh.gridij[0],veh.gridij[1],0);
+
+    printf("Vehicle xy location in ENU: %.3f,%.3f orientation: %.3f\n",veh.xy_abs.x,veh.xy_abs.y,veh.xy_abs.o);
+    printf("Vehicle xy location in GRD: %.3f,%.3f orientation: %.3f\n",veh.xy_g.x,veh.xy_g.y,veh.xy_g.o);
 }
 void init_map(void) {
     int i,j;
@@ -805,6 +903,9 @@ void init_map(void) {
 
     for(i=0;i<7;i++) arena.st_headings[i]=PI/2-(i)*PI/4.0;
     arena.st_headings[7]=135*PI/180;
+
+
+    printf("Arena size: %.3fx%.3f m\n",lside,lside);
     
 
     
@@ -812,4 +913,3 @@ void init_map(void) {
     
     /*sim_init();*/
 }
-

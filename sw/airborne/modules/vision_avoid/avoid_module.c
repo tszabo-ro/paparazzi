@@ -25,6 +25,7 @@
 
 
 #include "avoid_module.h"
+#include "avoid_nav.h"
 #include "avoid_nav_transportFcns.h"
 
 // Computervision Runs in a thread
@@ -193,4 +194,57 @@ bool markArenaLimsAsWp(uint8_t wpIndex)
   ++arenaLimits.arenaLimIndex;
   
   return false;
+}
+
+// Anton's navigation stuff
+void avoid_nav_goto_wp(void){
+    struct EnuCoor_i target_wp;
+    target_wp.x = veh.wp_abs.x*256;
+    target_wp.y = veh.wp_abs.y*256;
+    target_wp.z = 1;
+
+    horizontal_mode = HORIZONTAL_MODE_WAYPOINT;
+    VECT2_COPY(navigation_target, target_wp);
+    NavVerticalAutoThrottleMode(RadOfDeg(0.000000));
+    nav_heading = ANGLE_BFP_OF_REAL(PI/2-veh.wp_abs.o);
+}
+bool_t flight_check_complete(void){
+    if(flight_check_counter == 1){
+        printf("Flight check complete!\n");
+        print2darr_float(arena.grid_weights_obs,GRID_RES,GRID_RES);
+        printf("\n");
+        print2darr_float(arena.grid_weights_exp,GRID_RES,GRID_RES);
+        return TRUE;
+    }
+    else return FALSE;
+}
+bool_t avoid_map_init(void) {
+    printf("Initializing arena\n");
+    
+    printf("Running init_map()...\n");
+    init_map();
+    printf("Running vehicle_cache_init()... ");
+    vehicle_cache_init();
+    printf("OK\n");
+
+#ifndef OPTI_REAL
+    printf("Initializing obstacle sim... \n");
+    obstacle_sim_init();
+    printf("OK\n");
+    float vv[10];;
+    int n;
+
+    obstacle_sim_return_angle(vv,&n);
+    vv[0]=vv[0]*180/PI;
+    printarr_float(vv,10);
+
+
+#endif
+
+#ifdef UDP_SHIZZLE
+
+
+#endif
+    
+    return FALSE;
 }

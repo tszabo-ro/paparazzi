@@ -56,17 +56,31 @@
 #include "image.h"
 
 // Downlink Video
-#define DOWNLINK_VIDEO 	          
+//#define DOWNLINK_VIDEO 	          
 #define DEBUG_VIDEO 	            1
 #define DEBUG_MARK_FEATUREPOINTS  1
 #define DEBUG_MARK_FLOWSUM        1
 
 #define DEBUG_OVERLAY_COLOR       255
 
+// Send the summed horizontal flow
 #define DOWNLINK_FLOWSUM 1
+
+//#define WITH_BINARY_IMAGE
+
+
+// Corner Detection
+#define MAX_FEATURE_COUNT 200
+
+// Peakdetector Threshold
+#define PEAKDETECTOR_THRESHOLD 0.5
+#define MINIMUM_FLOW_SCALE_VAL 20.0f
+
+
 
 #ifdef DOWNLINK_FLOWSUM
    struct UdpSocket *flowSock;
+   struct UdpSocket *mapSock;
 #endif
 
 #ifdef DOWNLINK_VIDEO
@@ -75,15 +89,17 @@
 
    uint8_t *downlinkBuffer;
    uint8_t *downlinkBufferGray;
+   uint8_t *jpegbuf;
 #endif
 
 // This will downscale the front camera image from (1280x720) to (320x180)
-//#define IMAGE_DOWNSIZE_FACTOR 4
-#define IMAGE_DOWNSIZE_FACTOR 4
+#ifdef DOWNLINK_VIDEO
+  #define IMAGE_DOWNSIZE_FACTOR 8
+#else
+  #define IMAGE_DOWNSIZE_FACTOR 2
+#endif
 
 
-
-uint8_t *jpegbuf;
 
 // Local variables
 struct visual_estimator_struct
@@ -96,8 +112,6 @@ struct visual_estimator_struct
   unsigned int inFrameHeight;
 
   // Images
-//  struct img_struct input_frame;
-//  struct img_struct current_frame;
   uint8_t *current_frame;
   uint8_t *prev_frame;
 
@@ -110,23 +124,15 @@ struct visual_estimator_struct
   // Store previous
   float prev_pitch;
   float prev_roll;
+  float prev_yaw;
 } visual_estimator;
 
 // ARDrone Vertical Camera Parameters
-#define FOV_H 0.67020643276
-#define FOV_W 0.89360857702
-#define Fx_ARdrone 343.1211
-#define Fy_ARdrone 348.5053
-
-// Corner Detection
-#define MAX_FEATURE_COUNT 100
-#define MAX_FLOW_COUNT    25
-
-// Flow Derotation
-#define FLOW_DEROTATION
-
-// Peakdetector Threshold
-#define PEAKDETECTOR_THRESHOLD 0.5
+// Bottom Camera
+//#define FOV_H 0.67020643276
+//#define FOV_W 0.89360857702
+// Front Camera
+#define FOV_W 1.60570291184
 
 // Called by plugin
 void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *results)
@@ -166,6 +172,8 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
   init_map();
   vehicle_cache_init();
 
+  flowPeaks.angles      = 0;
+  flowPeaks.nAngles     = 0;
 
 #ifdef DOWNLINK_VIDEO
   // Video Compression
@@ -178,6 +186,7 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
 #endif
 #ifdef DOWNLINK_FLOWSUM
   flowSock = udp_socket("192.168.1.255", 9000, 9001, FMS_BROADCAST);;
+  mapSock  = udp_socket("192.168.1.255", 10000, 10001, FMS_BROADCAST);;
 #endif
 }
 
@@ -190,9 +199,10 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   int x[MAX_FEATURE_COUNT], y[MAX_FEATURE_COUNT];
   int new_x[MAX_FEATURE_COUNT], new_y[MAX_FEATURE_COUNT];
   int status[MAX_FEATURE_COUNT];
-  int dx[MAX_FEATURE_COUNT], dy[MAX_FEATURE_COUNT];
+  int dx[MAX_FEATURE_COUNT];//, dy[MAX_FEATURE_COUNT]; <- we don't use the vertical flow
   int w = visual_estimator.imgWidth;
   int h = visual_estimator.imgHeight;
+
 
 
   // Framerate Measuring
@@ -208,6 +218,23 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   // Get Grayscale image
   CvtYUYV2Gray(visual_estimator.gray_frame, visual_estimator.current_frame, w, h);
 
+#ifdef WITH_BINARY_IMAGE
+  double pxValSum = 0;
+  for (int i=0; i < w*h; ++i)
+    pxValSum += visual_estimator.gray_frame[i];
+  
+  pxValSum /= (w*h);
+
+  unsigned char pxTh = pxValSum;
+  printf("pxTh: %d ",pxTh);
+  for (int i=0; i < w*h; ++i)
+  {
+    if (visual_estimator.gray_frame[i] > pxTh)
+      visual_estimator.gray_frame[i] = 255;
+    else
+      visual_estimator.gray_frame[i] = 0;
+  }
+#endif
 
   // Initialize prev_frame & prev_gray_frame to the current frames
   if (visual_estimator.old_img_init == 1) {
@@ -233,7 +260,11 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 
   printf("fP: %d ", results->count);
   // Remove neighboring corners
+#ifdef DOWNLINK_VIDEO
   int min_distance = 5;
+#else
+  int min_distance = 30;
+#endif
   int min_distance2 = min_distance * min_distance;
 
   unsigned char labelRemove[results->count];
@@ -254,7 +285,6 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
       // distance squared:
       int p_dx = pnts_fast[i].x - pnts_fast[j].x;
       int p_dy = pnts_fast[i].y - pnts_fast[j].y;
-//      float distance2 = (x[i] - x[j]) * (x[i] - x[j]) + (y[i] - y[j]) * (y[i] - y[j]);
       int distance2 = p_dx*p_dx + p_dy*p_dy;;
       if (distance2 < min_distance2)
         labelRemove[j] = 1;
@@ -297,21 +327,15 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
     }
     ++srcPos;
   }
-  results->count = destPos;
+  results->count      = destPos;
+  results->flow_count = results->count;
 
   free(pnts_fast);
-
-
-//  #warning !!!!!!!!!!!!!!!!! CORNER TRACKING DISABLED !!!!!!!!!!!!!!!!!!!
+  printf("nP: %d ", results->count);
 
   // *************************************************************************************
   // Corner Tracking
   // *************************************************************************************
-//  opticFlowLK(visual_estimator.gray_frame, visual_estimator.prev_gray_frame, x, y,
-//              count_fil, w, h, new_x, new_y, status, 5, 100);
-
-  results->flow_count = results->count;
-
   opticFlowLK(visual_estimator.gray_frame, visual_estimator.prev_gray_frame, x, y,
               results->flow_count, w, h, new_x, new_y, status, 5, 100);
 
@@ -320,8 +344,11 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   destPos = 0;
   for (srcPos = 0; srcPos < results->flow_count; ++srcPos)
   {
-    if (status[srcPos] && !(new_x[srcPos] < borderx || new_x[srcPos] > (w - 1 - borderx) ||
-                 new_y[srcPos] < bordery || new_y[srcPos] > (h - 1 - bordery)))
+    if (  status[srcPos] && 
+        !(new_x[srcPos] < borderx || new_x[srcPos] > (w - 1 - borderx) ||
+                 new_y[srcPos] < bordery || new_y[srcPos] > (h - 1 - bordery)) &&
+          (x[srcPos] != new_x[srcPos])
+       )
     {
       if (srcPos != destPos) // No point in copying to the same place... is there?
       {
@@ -335,74 +362,16 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   }
   results->flow_count = destPos;
 
-/*  for (int i = results->flow_count - 1; i >= 0; i--) 
-  {
-    int remove_point = 1;
-
-    if (status[i] && !(new_x[i] < borderx || new_x[i] > (w - 1 - borderx) ||
-                       new_y[i] < bordery || new_y[i] > (h - 1 - bordery))) 
-    {
-      remove_point = 0;
-    }
-
-    if (remove_point) 
-    {
-      for (int c = i; c < results->flow_count - 1; c++) 
-      {
-        x[c] = x[c + 1];
-        y[c] = y[c + 1];
-        new_x[c] = new_x[c + 1];
-        new_y[c] = new_y[c + 1];
-      }
-      results->flow_count--;
-    }
-  }
-*/
   // Optical Flow Computation
   for (int i = 0; i < results->flow_count; i++) 
   {
-    dx[i] = new_x[i] - x[i];
-    dy[i] = new_y[i] - y[i];
+//    dy[i] = new_y[i] - y[i]; // <- we don't use the vertical flow
+    if (new_x[i] > x[i]) // So we get the magnitude only
+      dx[i] = new_x[i] - x[i];
+    else
+      dx[i] = x[i] - new_x[i];
   }
 
-/*  results->dx_sum = 0.0;
-  results->dy_sum = 0.0;
-  // Median Filter
-  if (results->flow_count) {
-    quick_sort_int(dx, results->flow_count); // 11
-    quick_sort_int(dy, results->flow_count); // 11
-
-    results->dx_sum = (float) dx[results->flow_count / 2];
-    results->dy_sum = (float) dy[results->flow_count / 2];
-  } else {
-    results->dx_sum = 0.0;
-    results->dy_sum = 0.0;
-  }*/
-
-  // Flow Derotation
-  float diff_pitch = (info->theta - visual_estimator.prev_pitch) * h / FOV_H;
-  float diff_roll = (info->phi - visual_estimator.prev_roll) * w / FOV_W;
-  visual_estimator.prev_pitch = info->theta;
-  visual_estimator.prev_roll = info->phi;
-
-//  float OFx_trans, OFy_trans;
-#ifdef FLOW_DEROTATION/*
-  if (results->flow_count) {
-    OFx_trans = results->dx_sum - diff_roll;
-    OFy_trans = results->dy_sum - diff_pitch;
-
-    if ((OFx_trans <= 0) != (results->dx_sum <= 0)) {
-      OFx_trans = 0;
-      OFy_trans = 0;
-    }
-  } else {
-    OFx_trans = results->dx_sum;
-    OFy_trans = results->dy_sum;
-  }
-#else
-  OFx_trans = results->dx_sum;
-  OFy_trans = results->dy_sum;*/
-#endif
 
 
   // *************************************************************************************
@@ -416,37 +385,54 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   navTransportData.stateWpStatus    = (info->targetDist < 0.1f); // Threshold on reaching the target is set to 0.1 meters!
   
   float peakAngles[10];
-  int   numPeaks = 10;
-
-//  peakfinder (int Ncols, int Nflows, int *hPos, int *hFlow, float threshold, float vangle, int *np, float * angle);
-//  peakfinder(w, results->flow_count, (int*)&new_x, (int*)&dx, PEAKDETECTOR_THRESHOLD, FOV_W, &numPeaks, (float*)&peakAngles);
-  
+  int   numPeaks = 10;  
   float flowSum[w];
-  float maxFlow;
 
-  printf("maxFlowSum: %.2f nF: %d nP: %d ", maxFlow, results->flow_count, results->count);
-  cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum, &maxFlow);
-  if (maxFlow < 0.001)
-    maxFlow = 0.001;
-  cv_smoothAndNormalizeSum(flowSum, w, maxFlow, 20);
+  printf("nF: %d ", results->flow_count);
 
+
+  cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum);
+
+  int smootherSize = (256/IMAGE_DOWNSIZE_FACTOR);
+
+  cv_smoothAndNormalizeSum((float*)&flowSum, w, smootherSize,MINIMUM_FLOW_SCALE_VAL);
+  cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
+//  float *angles;
+//  int nAngles;
+
+    flowPeaks.angles = (float*)&peakAngles;
+    flowPeaks.nAngles = numPeaks;
 #ifdef DOWNLINK_FLOWSUM
-  {
-    unsigned char numSeg = 20;
-    unsigned char segVals[numSeg];
-
-    int numPixPerSeg = (w/numSeg);
-    for (int seg=0; seg < numSeg; ++seg)
+  { 
+    int nS = w*2;
+    unsigned char txBuf[nS];
+    for (int i=0; i < w; ++i)
     {
-      float segSum = 0;
-      for (int px = seg*numPixPerSeg; px < (seg+1)*numPixPerSeg; ++px)
-        segSum += (flowSum[px]/maxFlow);
-      
-      segVals[seg] = (unsigned char)segSum;
+      float V = (100.0f*flowSum[i]);
+      int16_t Vi = ((int16_t)V);
+      txBuf[i] = ((unsigned char)Vi);
+
+
+      if (flowSum[i] > PEAKDETECTOR_THRESHOLD)
+        txBuf[i+w] = 100;
+      else
+        txBuf[i+w] = 0;
     }
-    
-    if (udp_write(flowSock, (unsigned char*)&segVals, numSeg) != numSeg)
+    if (udp_write(flowSock, (unsigned char*)&txBuf, nS) != nS)
       printf("UDP write error! ");
+  }
+  {
+    unsigned char obsMap[GRID_RES*GRID_RES*2];
+
+    for (int i=0; i < GRID_RES*GRID_RES; ++i)
+      obsMap[i] = (unsigned char)(arena.grid_weights_obs[i]*2);
+
+    for (int i=0; i < GRID_RES*GRID_RES; ++i)
+      obsMap[i+(GRID_RES*GRID_RES)] = (unsigned char)(arena.grid_weights_exp[i]*10);
+
+
+    if (udp_write(flowSock, (unsigned char*)&obsMap, GRID_RES*GRID_RES*2) != GRID_RES*GRID_RES*2)
+      printf("UDP map write error! ");
   }
 #endif
 
@@ -455,7 +441,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
     #ifdef DEBUG_MARK_FLOWSUM
   for (int i=0; i < w; ++i)
   {
-    int mH = (flowSum[w]/maxFlow)*(h-2)+1;
+    int mH = (flowSum[w])*(h-2)+1;
     downlinkBufferGray[i + mH*w]      = DEBUG_OVERLAY_COLOR;
     downlinkBufferGray[i + (mH-1)*w]  = DEBUG_OVERLAY_COLOR;
     if (i == 0)
@@ -473,9 +459,8 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   #endif
 #endif
 
-  #warning !!!!!!!!!!!!!!!!!Navigation Disabled in visual_estimator.c!!!!!!!!!!!!!!!!!!!
-  cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
-//  navigate();
+//  #warning !!!!!!!!!!!!!!!!!Navigation Disabled in visual_estimator.c!!!!!!!!!!!!!!!!!!!
+  navigate();
 
   results->WP_pos_X     = navTransportData.currentWpLocationX;
   results->WP_pos_Y     = navTransportData.currentWpLocationY;
@@ -507,6 +492,10 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 
   memcpy(visual_estimator.prev_frame, frame, w * h * 2);
   memcpy(visual_estimator.prev_gray_frame, visual_estimator.gray_frame, w * h);
+
+  visual_estimator.prev_pitch = info->theta;
+  visual_estimator.prev_roll  = info->phi;
+
   printf("\n");
 }
 void ImGray2UYVU(unsigned char *frame, unsigned char *grayFrame, int imW, int imH)

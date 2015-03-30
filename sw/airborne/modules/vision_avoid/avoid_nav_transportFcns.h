@@ -48,6 +48,12 @@ struct arenaLimsENU
 };
 struct arenaLimsENU arenaLimits;
 
+struct flowPeaksStruct
+{
+  float *angles;
+  int nAngles;
+} flowPeaks;
+
 extern struct navTransport navTransportData;
 
 extern void     getArenaLimits(float *coords, int N);

@@ -29,6 +29,19 @@
 #define OPTICFLOW_MODULE_H
 
 #include "std.h"
+#include "../../math/pprz_algebra_int.h"
+#include "../../math/pprz_geodetic_int.h"
+
+// Anton's Avoidance stuff
+struct EnuCoor_i nav_avoid_carrot;
+float flight_check_counter;
+
+bool_t avoid_map_init(void);
+void avoid_nav_goto_wp(void);
+bool_t flight_check(void);
+bool_t flight_check_complete(void);
+#define obs_avoid_init() ({avoid_map_init(); FALSE; })
+
 // Module functions
 extern void opticflow_module_init(void);
 extern void opticflow_module_run(void);
