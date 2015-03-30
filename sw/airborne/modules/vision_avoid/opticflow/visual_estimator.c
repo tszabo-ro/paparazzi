@@ -38,7 +38,26 @@
 
 // Computer Vision
 #include "opticflow/optic_flow_int.h"
-#include "opticflow/fast9/fastRosten.h"
+
+
+#define AVOID_BASED_ON_COLOR
+//#define USE_HARRIS_DETECTOR
+//#define WITH_NAVIGATION
+
+#ifdef AVOID_BASED_ON_COLOR
+   #pragma message("Avoiding based on color!")
+#endif
+
+#ifndef AVOID_BASED_ON_COLOR
+  #ifdef USE_HARRIS_DETECTOR
+    #error This implementation of Harris is very slow and it just doesn't work. Use FAST!
+    #include "opticflow/harris.h"
+    #pragma message("Using the Harris detector")
+  #else
+    #include "opticflow/fast9/fastRosten.h"
+    #pragma message("Using the FAST detector")
+  #endif
+#endif
 
 // for FPS
 #include "modules/computer_vision/cv/framerate.h"
@@ -73,35 +92,44 @@
 #define MAX_FEATURE_COUNT 200
 
 // Peakdetector Threshold
-#define PEAKDETECTOR_THRESHOLD 0.5
+#define PEAKDETECTOR_THRESHOLD 0.3
 #define MINIMUM_FLOW_SCALE_VAL 20.0f
 
 
 
 #ifdef DOWNLINK_FLOWSUM
-   struct UdpSocket *flowSock;
-   struct UdpSocket *mapSock;
+  #pragma message("Horizontal Flow & arena map downlink enabled")
+  struct UdpSocket *flowSock;
+  struct UdpSocket *mapSock;
 #endif
 
 #ifdef DOWNLINK_VIDEO
-   #include "encoding/jpeg.h"
-   struct UdpSocket *vsock;
+  #pragma message("Video Downlink Enabled")
+  #include "encoding/jpeg.h"
+  struct UdpSocket *vsock;
 
-   uint8_t *downlinkBuffer;
-   uint8_t *downlinkBufferGray;
-   uint8_t *jpegbuf;
+  uint8_t *downlinkBuffer;
+  uint8_t *downlinkBufferGray;
+  uint8_t *jpegbuf;
 #endif
 
 // This will downscale the front camera image from (1280x720) to (320x180)
-#ifdef DOWNLINK_VIDEO
-  #define IMAGE_DOWNSIZE_FACTOR 8
+#ifdef AVOID_BASED_ON_COLOR
+    #define IMAGE_DOWNSIZE_FACTOR 1
 #else
-  #define IMAGE_DOWNSIZE_FACTOR 2
+  #ifdef DOWNLINK_VIDEO
+    #define IMAGE_DOWNSIZE_FACTOR 2
+  #else
+    #define IMAGE_DOWNSIZE_FACTOR 1
+  #endif
 #endif
 
 
 
 // Local variables
+#ifdef USE_HARRIS_DETECTOR
+  harris_data harrisData;
+#endif
 struct visual_estimator_struct
 {
   // Image size
@@ -128,9 +156,11 @@ struct visual_estimator_struct
 } visual_estimator;
 
 // ARDrone Vertical Camera Parameters
+
 // Bottom Camera
 //#define FOV_H 0.67020643276
 //#define FOV_W 0.89360857702
+
 // Front Camera
 #define FOV_W 1.60570291184
 
@@ -144,12 +174,14 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
 // Only the incoming frame has the complete size.
   w = w / IMAGE_DOWNSIZE_FACTOR;
   h = h / IMAGE_DOWNSIZE_FACTOR;
-
+//#ifndef AVOID_BASED_ON_COLOR <= TODO: Sigfaults if not commented!
   visual_estimator.current_frame    = (uint8_t *)malloc(w * h * 2);
   visual_estimator.prev_frame       = (uint8_t *)malloc(w * h * 2);
   visual_estimator.gray_frame       = (unsigned char *) calloc(w * h, sizeof(uint8_t));
   visual_estimator.prev_gray_frame  = (unsigned char *) calloc(w * h, sizeof(uint8_t));
-
+//#else
+//  visual_estimator.gray_frame       = (unsigned char *) calloc(w * h, sizeof(uint8_t));
+//#endif
   visual_estimator.old_img_init = 1;
   visual_estimator.prev_pitch = 0.0;
   visual_estimator.prev_roll = 0.0;
@@ -168,9 +200,18 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
   
   framerate_init();
 
+#ifdef USE_HARRIS_DETECTOR
+  // Initialize the Harris detector
+  harris_init(&harrisData, 3, 2, 0.5, 0.04);
+#endif
+
+#ifdef WITH_NAVIGATION
 // Initialize obstacle map  
   init_map();
   vehicle_cache_init();
+#else
+  #warning Navigation Disabled!
+#endif
 
   flowPeaks.angles      = 0;
   flowPeaks.nAngles     = 0;
@@ -189,17 +230,25 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
   mapSock  = udp_socket("192.168.1.255", 10000, 10001, FMS_BROADCAST);;
 #endif
 }
-
+void opticflow_plugin_free(void)
+{
+#ifdef USE_HARRIS_DETECTOR
+  // Initialize the Harris detector
+  harris_free(&harrisData);
+#endif
+}
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
 {
   // Corner Tracking
   // Working Variables
 //  int max_count = 25;
+#ifndef AVOID_BASED_ON_COLOR
   int borderx = 24, bordery = 24;
   int x[MAX_FEATURE_COUNT], y[MAX_FEATURE_COUNT];
   int new_x[MAX_FEATURE_COUNT], new_y[MAX_FEATURE_COUNT];
   int status[MAX_FEATURE_COUNT];
   int dx[MAX_FEATURE_COUNT];//, dy[MAX_FEATURE_COUNT]; <- we don't use the vertical flow
+#endif
   int w = visual_estimator.imgWidth;
   int h = visual_estimator.imgHeight;
 
@@ -207,7 +256,6 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 
   // Framerate Measuring
   results->FPS = framerate_run();
-
   printf("visual_estimator.c: Current FPS: %.2f ",results->FPS);
 
   // Downsize the image for processing
@@ -216,7 +264,11 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
               IMAGE_DOWNSIZE_FACTOR);
 
   // Get Grayscale image
+#ifndef AVOID_BASED_ON_COLOR
   CvtYUYV2Gray(visual_estimator.gray_frame, visual_estimator.current_frame, w, h);
+#else
+  ImUYVU2Gray(visual_estimator.gray_frame, visual_estimator.current_frame, w, h); // <= not really grayscale image though.
+#endif
 
 #ifdef WITH_BINARY_IMAGE
   double pxValSum = 0;
@@ -242,21 +294,25 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
     memcpy(visual_estimator.prev_gray_frame, visual_estimator.gray_frame, w * h);
     visual_estimator.old_img_init = 0;
   }
-
 #ifdef DOWNLINK_VIDEO
  // Make a copy of the current frame, so we can add stuff to it for debuging
  memcpy(downlinkBufferGray, visual_estimator.prev_gray_frame, w*h);
 #endif
 
+#ifndef AVOID_BASED_ON_COLOR
   // *************************************************************************************
   // Corner detection
   // *************************************************************************************
 
+#ifdef USE_HARRIS_DETECTOR
+  xyPos *featPts = harris(&harrisData, visual_estimator.prev_gray_frame, w, h, &results->count, HARRIS_LOOKFOR_EDGES);
+#else
   // FAST corner detection
   int fast_threshold = 20;
-  xyFAST *pnts_fast;
-  pnts_fast = fast9_detect((const byte *)visual_estimator.prev_gray_frame, w, h, w,
+  xyFAST *featPts;
+  featPts = fast9_detect((const byte *)visual_estimator.prev_gray_frame, w, h, w,
                            fast_threshold, &results->count);
+#endif
 
   printf("fP: %d ", results->count);
   // Remove neighboring corners
@@ -283,8 +339,8 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
         continue;
 
       // distance squared:
-      int p_dx = pnts_fast[i].x - pnts_fast[j].x;
-      int p_dy = pnts_fast[i].y - pnts_fast[j].y;
+      int p_dx = featPts[i].x - featPts[j].x;
+      int p_dy = featPts[i].y - featPts[j].y;
       int distance2 = p_dx*p_dx + p_dy*p_dy;;
       if (distance2 < min_distance2)
         labelRemove[j] = 1;
@@ -298,8 +354,8 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   {
     if (!labelRemove[srcPos])
     {
-      x[destPos] = pnts_fast[srcPos].x;
-      y[destPos] = pnts_fast[srcPos].y;
+      x[destPos] = featPts[srcPos].x;
+      y[destPos] = featPts[srcPos].y;
 
 #ifdef DOWNLINK_VIDEO
   #ifdef DEBUG_VIDEO
@@ -330,7 +386,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   results->count      = destPos;
   results->flow_count = results->count;
 
-  free(pnts_fast);
+  free(featPts);
   printf("nP: %d ", results->count);
 
   // *************************************************************************************
@@ -372,7 +428,9 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
       dx[i] = x[i] - new_x[i];
   }
 
-
+#else // #ifndef AVOID_BASED_ON_COLOR
+// There is nothing to calculate here really...
+#endif
 
   // *************************************************************************************
   // This is where the avoidance magic happen!
@@ -387,7 +445,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   float peakAngles[10];
   int   numPeaks = 10;  
   float flowSum[w];
-
+#ifndef AVOID_BASED_ON_COLOR
   printf("nF: %d ", results->flow_count);
 
 
@@ -396,12 +454,30 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   int smootherSize = (256/IMAGE_DOWNSIZE_FACTOR);
 
   cv_smoothAndNormalizeSum((float*)&flowSum, w, smootherSize,MINIMUM_FLOW_SCALE_VAL);
-  cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
-//  float *angles;
-//  int nAngles;
+#else
+  float maxSum = 0;
+  for (int i=0; i < w; ++i)
+  {
+    double colSum = 0;
+    for (int j=0; j < h; ++j) // Sum the pixel values over the height of the image
+      colSum +=visual_estimator.gray_frame[i + j*w];
+    
+    colSum /= h; // Normalize by height;
 
-    flowPeaks.angles = (float*)&peakAngles;
-    flowPeaks.nAngles = numPeaks;
+    flowSum[i] = (float)colSum;
+    if (flowSum[i] > maxSum)
+      maxSum = flowSum[i];
+  }
+
+  // Normalize the sum
+  for (int i=0; i < w; ++i)
+    flowSum[i] /= maxSum;
+
+#endif
+  cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
+
+  flowPeaks.angles = (float*)&peakAngles;
+  flowPeaks.nAngles = numPeaks;
 #ifdef DOWNLINK_FLOWSUM
   { 
     int nS = w*2;
@@ -460,7 +536,10 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 #endif
 
 //  #warning !!!!!!!!!!!!!!!!!Navigation Disabled in visual_estimator.c!!!!!!!!!!!!!!!!!!!
-  navigate();
+#ifdef WITH_NAVIGATION
+  if (numPeaks > 0)
+    navigate();
+#endif
 
   results->WP_pos_X     = navTransportData.currentWpLocationX;
   results->WP_pos_Y     = navTransportData.currentWpLocationY;
@@ -489,10 +568,10 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   // *************************************************************************************
   // Next Loop Preparation
   // *************************************************************************************
-
+#ifndef AVOID_BASED_ON_COLOR
   memcpy(visual_estimator.prev_frame, frame, w * h * 2);
   memcpy(visual_estimator.prev_gray_frame, visual_estimator.gray_frame, w * h);
-
+#endif
   visual_estimator.prev_pitch = info->theta;
   visual_estimator.prev_roll  = info->phi;
 
@@ -510,11 +589,25 @@ void ImGray2UYVU(unsigned char *frame, unsigned char *grayFrame, int imW, int im
 }
 void ImUYVU2Gray(unsigned char *grayFrame, unsigned char *frame, int imW, int imH)
 {
+// If avoiding based on color information than the image intensity is not relevant, but the U/V components, especially the V for the orange obstacles
+#ifndef AVOID_BASED_ON_COLOR 
   for (int i=0; i < imW*imH; ++i)
   {
     *grayFrame++ = *frame++;
     ++frame;
   }
+#else
+  unsigned char *dest = grayFrame;
+  unsigned char *src  = frame;
+// Take the V values of the image
+  src+=2; // This is the first V
+  while ((dest - grayFrame) < imW*imH)
+  {
+    *dest++ = *src; // Use it for both pixel values
+    *dest++ = *src;
+    src += 4;       // Go to the next V value
+  }
+#endif
 }
 void ImResizeUYVU(unsigned char *output, int imWOut, int imHOut, unsigned char *input, int imWIn, int imHIn, int downsample)
 { // Adapted from resize.h for using the raw image buffers

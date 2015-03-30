@@ -154,6 +154,7 @@ void *computervision_thread_main(void *args)
     // Free the image
     v4l2_image_free(dev, img);
   }
+  opticflow_plugin_free();
 
   printf("Thread Closed\n");
   v4l2_close(dev);
