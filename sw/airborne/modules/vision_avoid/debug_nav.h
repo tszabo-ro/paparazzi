@@ -12,6 +12,15 @@
 // Send the summed horizontal flow
 #define DOWNLINK_FLOWSUM 1
 
+// Console print debug
+#define DEBUG_CONSOLE_PRINT
+
 //#define USE_HARRIS_DETECTOR
+
+#ifdef DEBUG_CONSOLE_PRINT
+  #define C_LOG(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#else
+    #define C_LOG(fmt, ...)
+#endif
 
 #endif

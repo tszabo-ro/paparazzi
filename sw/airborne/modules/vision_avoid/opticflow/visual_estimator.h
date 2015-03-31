@@ -30,6 +30,32 @@
 
 #include "inter_thread_data.h"
 
+struct visual_estimator_struct
+{
+  // Image size
+  unsigned int imgWidth;
+  unsigned int imgHeight;
+
+  unsigned int inFrameWidth;
+  unsigned int inFrameHeight;
+
+  // Images
+  uint8_t *current_frame;
+  uint8_t *prev_frame;
+
+  uint8_t *gray_frame;
+  uint8_t *prev_gray_frame;
+
+  // Initialization
+  int old_img_init;
+
+  // Store previous
+  float prev_pitch;
+  float prev_roll;
+  float prev_yaw;
+} visual_estimator;
+
+
 /**
  * Initialize visual estimator.
  * @param w  image width
