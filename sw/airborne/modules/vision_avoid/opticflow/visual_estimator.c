@@ -114,7 +114,6 @@
 #endif
 
 // This will downscale the front camera image from (1280x720) to (320x180)
-#ifdef DOWNLINK_VIDEO
 #ifdef AVOID_BASED_ON_COLOR
     #define IMAGE_DOWNSIZE_FACTOR 1
 #else
