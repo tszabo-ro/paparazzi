@@ -27,6 +27,7 @@
 <!--    <file name="hover_stabilization.c" dir="modules/vision_avoid/opticflow"/>-->
     <file name="optic_flow_int.c" dir="modules/vision_avoid/cv/opticflow"/>
     <file name="fastRosten.c" dir="modules/vision_avoid/cv/opticflow/fast9"/>
+    <file name="harris.c" dir="modules/vision_avoid/cv/opticflow/"/>
     <file name="trig.c" dir="modules/vision_avoid/cv"/>
     <file name="framerate.c" dir="modules/vision_avoid/cv"/>
     <file name="jpeg.c" dir="modules/vision_avoid/cv/encoding"/>

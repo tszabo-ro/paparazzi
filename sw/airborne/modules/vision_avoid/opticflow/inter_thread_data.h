@@ -31,9 +31,9 @@
 
 /// Data from thread to module
 struct CVresults {
-  int cnt;          // Number of processed frames
-  int flow_count;
-  int count;
+  unsigned int cnt;          // Number of processed frames
+  unsigned int flow_count;
+  unsigned int count;
   float FPS;
   
   float WP_pos_X;
