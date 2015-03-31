@@ -218,19 +218,19 @@ void opticflow_plugin_free(void)
 /////////////////////////////////////////////////////
 //// Debug stuff
 /////////////////////////////////////////////////////
-#ifdef DEBUG_CONSOLE_PRINT
+//#ifdef DEBUG_CONSOLE_PRINT
 int printfCounter = 0;
-#endif
+//#endif
 
 
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
 {
-#ifdef DEBUG_CONSOLE_PRINT
+//#ifdef DEBUG_CONSOLE_PRINT
 if(printfCounter > 10)
 {  nav_print_full_report(); printfCounter = 0; }
 else
   ++printfCounter;
-#endif
+//#endif
 
   // Corner Tracking
   // Working Variables
