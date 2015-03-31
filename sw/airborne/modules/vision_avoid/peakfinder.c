@@ -169,10 +169,10 @@ void cv_smoothAndNormalizeSum(float *flowSum, int NCols, unsigned char smootherS
 void cv_peakFinder(float *flowSum, int NCols, float threshold, int *np, float *angle, float visualAngle)
 {
 	float left[*np], right[*np];//, center[*np];
-	unsigned char w[NCols+2];
+	unsigned char w[NCols];
 	
 	int i,j,k;
-	w[0] = 0; // Forcing zero on the begining and end of the new vector to force atleast one peak 
+//	w[0] = 0; // Forcing zero on the begining and end of the new vector to force atleast one peak 
 	
 	for(j=0; j<NCols; ++j)
     if ( flowSum[j] > threshold )
@@ -180,12 +180,13 @@ void cv_peakFinder(float *flowSum, int NCols, float threshold, int *np, float *a
     else
       w[j+1] = 0;
 
-	w[j+1] = 0;
+//	w[j+1] = 0;
 
 
 	i = 0;
 	k = 0;
-	for(j=0; j<NCols+2; ++j)
+//	for(j=0; j<NCols+2; ++j)
+	for(j=0; j<NCols; ++j)
 	{
     if ( (w[j+1] > w[j]) && (i < (*np)) )
 			left[i++]=j; // vector with the index of the "ascending" part of the peak
@@ -212,7 +213,10 @@ void cv_peakFinder(float *flowSum, int NCols, float threshold, int *np, float *a
   
   while (dest < *np)
   {
-    angle[dest++] = ((*(src++)/(NCols+2))-0.5)*visualAngle;
+    angle[dest] = ((*src/(NCols+2))-0.5)*visualAngle;
+
+    ++dest;
+    ++src;
     if (isLeft)
     { src = R; isLeft = 0; }
     else

@@ -17,7 +17,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define AVOID_NAV_DEBUG
+//#define AVOID_NAV_DEBUG
 #define AVOID_NAV_DEBUG_DOWNLINK_SIZE 10
 
 #ifdef AVOID_NAV_DEBUG
