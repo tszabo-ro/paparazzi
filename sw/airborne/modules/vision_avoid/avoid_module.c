@@ -100,7 +100,7 @@ void opticflow_module_init(void)
   opticflow_module_data.enuPosY = 0;
 }
 
-
+struct CVresults vision_results;
 void opticflow_module_run(void)
 {
   // Send Updated data to thread
@@ -130,7 +130,6 @@ void opticflow_module_run(void)
   }
 
   // Read Latest Vision Module Results
-  struct CVresults vision_results;
   // Warning: if the vision runs faster than the module, you need to read multiple times
   int bytes_read = recv(cv_sockets[0], &vision_results, sizeof(vision_results), MSG_DONTWAIT);
   if (bytes_read != sizeof(vision_results)) {
@@ -273,3 +272,28 @@ bool_t avoid_map_init(void) {
     
     return FALSE;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+/////////// DEBUG!!!
+vec2d a,b,c;
+float gamma1,gamma2;
+
+bool bang1(void){
+    a = vec2d_init(0.9,0);
+    b = vec2d_init(0,0);
+    gamma1 = vision_results.angle;
+
+  return false;
+}
+
+
+bool bang2(void){
+    gamma2 = vision_results.angle;
+  return false;
+}
+bool n_print_output(void){
+    c = vec2d_triangulate(&a,&b,gamma1,gamma2);
+    printf("\n\n\nCoords: %f,%f\n\n\n\n",c.x,c.y);
+  return false;
+}
+

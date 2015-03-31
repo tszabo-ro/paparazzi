@@ -254,12 +254,7 @@ else
 
   // Framerate Measuring
   results->FPS = framerate_run();
-
-<<<<<<< HEAD
-  /*printf("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);*/
-=======
   V_LOG("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);
->>>>>>> 54c720044d134aa862a910fc65c503758c17c649
 
   // Downsize the image for processing
   ImResizeUYVU(visual_estimator.current_frame, visual_estimator.imgWidth, visual_estimator.imgHeight, 
@@ -450,11 +445,7 @@ else
   int   numPeaks = 100;  
   float flowSum[w];
 #ifndef AVOID_BASED_ON_COLOR
-<<<<<<< HEAD
-  /*printf("nF: %d ", results->flow_count);*/
-=======
   V_LOG("nF: %d ", results->flow_count);
->>>>>>> 54c720044d134aa862a910fc65c503758c17c649
 
 
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum);
@@ -485,6 +476,9 @@ else
   cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
   flowPeaks.angles = (float*)&peakAngles;
   flowPeaks.nAngles = numPeaks;
+
+/*  if (numPeaks > 0)
+    results->angle = peakAngles[0];*/
 
   N_LOG("\n");
   for (int i=0; i < flowPeaks.nAngles; ++i)
@@ -597,11 +591,7 @@ else
   visual_estimator.prev_pitch = info->theta;
   visual_estimator.prev_roll  = info->phi;
 
-<<<<<<< HEAD
-  /*printf("\n");*/
-=======
   V_LOG("\n");
->>>>>>> 54c720044d134aa862a910fc65c503758c17c649
 }
 void ImGray2UYVU(unsigned char *frame, unsigned char *grayFrame, int imW, int imH)
 {

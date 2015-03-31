@@ -39,14 +39,8 @@ struct CVresults {
   float WP_pos_X;
   float WP_pos_Y;
   float head_cmd;
-  
-/*  float Velx;       // Velocity as measured by camera
-  float Vely;
 
-  float cam_h;      // Debug parameters
-  float OFx, OFy, dx_sum, dy_sum;
-  float diff_roll;
-  float diff_pitch;*/
+  float angle; // <= DEBUG!!!
 };
 
 /// Data from module to thread

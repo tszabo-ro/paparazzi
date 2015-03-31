@@ -55,7 +55,6 @@ struct visual_estimator_struct
   float prev_yaw;
 } visual_estimator;
 
-
 /**
  * Initialize visual estimator.
  * @param w  image width

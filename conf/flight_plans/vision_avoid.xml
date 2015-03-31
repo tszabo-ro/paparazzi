@@ -67,6 +67,15 @@
     <block name="Vision Nav Init">
       <call fun="avoid_module_post_ahrs_init()" />
     </block>
+    <block name="BANG1">
+      <call fun="avoid_module_post_ahrs_init()" />
+    </block>
+    <block name="BANG2">
+      <call fun="avoid_module_post_ahrs_init()" />
+    </block>
+    <block name="PrintResults">
+      <call fun="avoid_module_post_ahrs_init()" />
+    </block>
     <block name="Vision Navigate">
       <call fun="vision_avoid_update_WP(WP_VA)" />
     </block>
