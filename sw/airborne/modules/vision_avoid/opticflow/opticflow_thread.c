@@ -48,7 +48,7 @@
 
 
 // The (maximum) rate in Hz of the thread
-#define OPTICFLOW_THREAD_RATE 20
+#define OPTICFLOW_THREAD_RATE 10
 
 #define OPTICFLOW_THREAD_DT_IN_USEC (1000000L/OPTICFLOW_THREAD_RATE)
 

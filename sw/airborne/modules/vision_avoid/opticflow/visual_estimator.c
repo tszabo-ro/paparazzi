@@ -65,15 +65,18 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 #define AVOID_BASED_ON_COLOR
-#define WITH_NAVIGATION
+//#define WITH_NAVIGATION
 #define WITH_BINARY_IMAGE
+
+//#define USE_HARRIS_DETECTOR
 
 // Corner Detection
 #define MAX_FEATURE_COUNT 200
 
 // Peakdetector Threshold
-#define PEAKDETECTOR_THRESHOLD 0.4
-#define MINIMUM_FLOW_SCALE_VAL 20.0f
+#define PEAKDETECTOR_THRESHOLD  0.4
+#define MINIMUM_FLOW_SCALE_VAL  20.0f
+#define COLOR_MIN_SUM           50
 
 // ARDrone Vertical Camera Parameters
 
@@ -82,7 +85,7 @@
 //#define FOV_W 0.89360857702
 
 // Front Camera
-#define FOV_W 1.60570291184
+#define FOV_W 1.2183
 
 
 #ifdef AVOID_BASED_ON_COLOR
@@ -105,9 +108,9 @@
 //    #define IMAGE_DOWNSIZE_FACTOR 1
 //#else
   #ifdef DOWNLINK_VIDEO
-    #define IMAGE_DOWNSIZE_FACTOR 4
+    #define IMAGE_DOWNSIZE_FACTOR 8
   #else
-    #define IMAGE_DOWNSIZE_FACTOR 1
+    #define IMAGE_DOWNSIZE_FACTOR 2
   #endif
 //#endif
 
@@ -235,7 +238,7 @@ else
 
   // Corner Tracking
   // Working Variables
-//  int max_count = 25;
+
 #ifndef AVOID_BASED_ON_COLOR
   int borderx = 24, bordery = 24;
   int x[MAX_FEATURE_COUNT], y[MAX_FEATURE_COUNT];
@@ -243,6 +246,7 @@ else
   int status[MAX_FEATURE_COUNT];
   int dx[MAX_FEATURE_COUNT];//, dy[MAX_FEATURE_COUNT]; <- we don't use the vertical flow
 #endif
+
   int w = visual_estimator.imgWidth;
   int h = visual_estimator.imgHeight;
 
@@ -251,7 +255,11 @@ else
   // Framerate Measuring
   results->FPS = framerate_run();
 
+<<<<<<< HEAD
   /*printf("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);*/
+=======
+  V_LOG("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);
+>>>>>>> 54c720044d134aa862a910fc65c503758c17c649
 
   // Downsize the image for processing
   ImResizeUYVU(visual_estimator.current_frame, visual_estimator.imgWidth, visual_estimator.imgHeight, 
@@ -265,6 +273,7 @@ else
   ImUYVU2Gray(visual_estimator.gray_frame, visual_estimator.current_frame, w, h); // <= not really grayscale image though.
 #endif
 
+// Convert the image to binary
 #ifdef WITH_BINARY_IMAGE
   double pxValSum = 0;
   for (int i=0; i < w*h; ++i)
@@ -441,7 +450,11 @@ else
   int   numPeaks = 100;  
   float flowSum[w];
 #ifndef AVOID_BASED_ON_COLOR
+<<<<<<< HEAD
   /*printf("nF: %d ", results->flow_count);*/
+=======
+  V_LOG("nF: %d ", results->flow_count);
+>>>>>>> 54c720044d134aa862a910fc65c503758c17c649
 
 
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum);
@@ -462,15 +475,21 @@ else
       maxSum = flowSum[i];
 
   }
+  if (maxSum < COLOR_MIN_SUM)
+    maxSum = COLOR_MIN_SUM;
+
   // Normalize the sum
   for (int i=0; i < w; ++i)
-  {
     flowSum[i] /= maxSum;
-  }
 #endif
   cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
   flowPeaks.angles = (float*)&peakAngles;
   flowPeaks.nAngles = numPeaks;
+
+  N_LOG("\n");
+  for (int i=0; i < flowPeaks.nAngles; ++i)
+    N_LOG("%.2f ", peakAngles[i]);
+  N_LOG("\n");
 #ifdef DOWNLINK_FLOWSUM
   { 
     int nS = w*2;
@@ -495,10 +514,10 @@ else
 #ifdef AVOID_NAV_DEBUG
     memcpy(&txBuf+nS, &nav_debug_downlink, AVOID_NAV_DEBUG_DOWNLINK_SIZE*sizeof(float));
     if (udp_write(flowSock, (unsigned char*)&txBuf, (nS + (AVOID_NAV_DEBUG_DOWNLINK_SIZE*sizeof(float)))) != (nS + (AVOID_NAV_DEBUG_DOWNLINK_SIZE*sizeof(float))))
-      printf("UDP write error! ");
+      V_LOG("UDP write error! ");
 #else
     if (udp_write(flowSock, (unsigned char*)&txBuf, nS) != nS)
-      printf("UDP write error! ");
+      V_LOG("UDP write error! ");
 #endif
   }
   {
@@ -512,7 +531,7 @@ else
 
 
     if (udp_write(flowSock, (unsigned char*)&obsMap, GRID_RES*GRID_RES*2) != GRID_RES*GRID_RES*2)
-      printf("UDP map write error! ");
+      V_LOG("UDP map write error! ");
   }
 #endif
 
@@ -563,7 +582,7 @@ else
     
     uint32_t size = end - (jpegbuf);
 
-    //printf("Sending an image ...%u\n", size);
+    //V_LOG("Sending an image ...%u\n", size);
     send_rtp_frame(vsock, jpegbuf, size, w, h, 0, quality_factor, dri_header, 0);
 #endif
 
@@ -578,7 +597,11 @@ else
   visual_estimator.prev_pitch = info->theta;
   visual_estimator.prev_roll  = info->phi;
 
+<<<<<<< HEAD
   /*printf("\n");*/
+=======
+  V_LOG("\n");
+>>>>>>> 54c720044d134aa862a910fc65c503758c17c649
 }
 void ImGray2UYVU(unsigned char *frame, unsigned char *grayFrame, int imW, int imH)
 {
