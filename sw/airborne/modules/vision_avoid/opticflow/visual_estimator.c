@@ -41,7 +41,7 @@
 #include "../avoid_nav.h"
 
 // Debug defines & macros
-#include "debug_nav.h"
+#include "../debug_nav.h"
 
 // Image related includes
 #include "encoding/rtp.h"
@@ -136,31 +136,10 @@
 #ifdef USE_HARRIS_DETECTOR
   harris_data harrisData;
 #endif
-struct visual_estimator_struct
-{
-  // Image size
-  unsigned int imgWidth;
-  unsigned int imgHeight;
 
-  unsigned int inFrameWidth;
-  unsigned int inFrameHeight;
-
-  // Images
-  uint8_t *current_frame;
-  uint8_t *prev_frame;
-
-  uint8_t *gray_frame;
-  uint8_t *prev_gray_frame;
-
-  // Initialization
-  int old_img_init;
-
-  // Store previous
-  float prev_pitch;
-  float prev_roll;
-  float prev_yaw;
-} visual_estimator;
-
+/////////////////////////////////////////////////////////////////////////////////
+/// Init Function
+/////////////////////////////////////////////////////////////////////////////////
 
 // Called by plugin
 void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *results)
@@ -239,15 +218,19 @@ void opticflow_plugin_free(void)
 /////////////////////////////////////////////////////
 //// Debug stuff
 /////////////////////////////////////////////////////
+#ifdef DEBUG_CONSOLE_PRINT
 int printfCounter = 0;
+#endif
 
 
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
 {
+#ifdef DEBUG_CONSOLE_PRINT
 if(printfCounter > 10)
 {  nav_print_full_report(); printfCounter = 0; }
 else
   ++printfCounter;
+#endif
 
   // Corner Tracking
   // Working Variables
