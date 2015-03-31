@@ -42,7 +42,7 @@
 
 #define AVOID_BASED_ON_COLOR
 //#define USE_HARRIS_DETECTOR
-//#define WITH_NAVIGATION
+#define WITH_NAVIGATION
 
 #ifdef AVOID_BASED_ON_COLOR
    #pragma message("Avoiding based on color!")

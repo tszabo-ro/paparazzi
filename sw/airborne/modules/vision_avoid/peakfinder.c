@@ -168,7 +168,7 @@ void cv_smoothAndNormalizeSum(float *flowSum, int NCols, unsigned char smootherS
 }
 void cv_peakFinder(float *flowSum, int NCols, float threshold, int *np, float *angle, float visualAngle)
 {
-	float left[10], center[10], right[10];
+	float left[*np], right[*np];//, center[*np];
 	unsigned char w[NCols+2];
 	
 	int i,j,k;
@@ -187,29 +187,45 @@ void cv_peakFinder(float *flowSum, int NCols, float threshold, int *np, float *a
 	k = 0;
 	for(j=0; j<NCols+2; ++j)
 	{
-    if ( (w[j+1] > w[j]) && (i<10) )
+    if ( (w[j+1] > w[j]) && (i < (*np)) )
 			left[i++]=j; // vector with the index of the "ascending" part of the peak
 
-		if ( (w[j+1] < w[j]) && (k<10) )
+		if ( (w[j+1] < w[j]) && (k < (*np)) )
 			right[k++]=j; // vector with the index of the "descending" part of the peak
 
 	}
-	*np = i; // Number of peaks
-	if (i!=10)
+	if (i < (*np))
 	{
 		//If there is less than 10 peaks, the other part of the vectors will be zero
-		for(j=i; j<10; ++j)
+		for(j=i; j < (*np); ++j)
 		{
 			right[j]=NAN;
 			left[j]=NAN;
 		}
+	}
 
-	}
-	for(j=0; j<10; ++j)
-	{
-		center[j]=(right[j]+left[j])/2; 
-		angle[j] = ((center[j]/(NCols+2))-0.5)*visualAngle; // Conversion of the indices to real angles
-	}
+  int dest = 0;
+  float *L = (float*)&left;
+  float *R = (float*)&right;
+  float* src = L;
+  char isLeft = 1;
+  
+  while (dest < *np)
+  {
+    angle[dest] = ((*(src++)/(NCols+2))-0.5)*visualAngle;
+    if (isLeft)
+    { src = R; isLeft = 0; }
+    else
+    { src = L; isLeft = 1; }
+  }
+
+	*np = i; // Number of peaks
+//
+//	for(j=0; j<10; ++j)
+//	{
+//		center[j]=(right[j]+left[j])/2; 
+//		angle[j] = ((center[j]/(NCols+2))-0.5)*visualAngle; // Conversion of the indices to real angles
+//	}
 
 }
 
