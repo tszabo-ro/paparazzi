@@ -250,7 +250,7 @@ else
   // Framerate Measuring
   results->FPS = framerate_run();
 
-  printf("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);
+  /*printf("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);*/
 
   // Downsize the image for processing
   ImResizeUYVU(visual_estimator.current_frame, visual_estimator.imgWidth, visual_estimator.imgHeight, 
@@ -272,7 +272,7 @@ else
   pxValSum /= (w*h);
 
   unsigned char pxTh = pxValSum;
-  printf("pxTh: %d ",pxTh);
+  /*printf("pxTh: %d ",pxTh);*/
   for (int i=0; i < w*h; ++i)
   {
     if (visual_estimator.gray_frame[i] > pxTh)
@@ -308,7 +308,7 @@ else
                            fast_threshold, &results->count);
 #endif
 
-  printf("fP: %d ", results->count);
+/*printf("fP: %d ", results->count);*/
   // Remove neighboring corners
 #ifdef DOWNLINK_VIDEO
   int min_distance = 5;
@@ -381,7 +381,7 @@ else
   results->flow_count = results->count;
 
   free(featPts);
-  printf("nP: %d ", results->count);
+  /*printf("nP: %d ", results->count);*/
 
   // *************************************************************************************
   // Corner Tracking
@@ -440,7 +440,7 @@ else
   int   numPeaks = 100;  
   float flowSum[w];
 #ifndef AVOID_BASED_ON_COLOR
-  printf("nF: %d ", results->flow_count);
+  /*printf("nF: %d ", results->flow_count);*/
 
 
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum);
@@ -577,7 +577,7 @@ else
   visual_estimator.prev_pitch = info->theta;
   visual_estimator.prev_roll  = info->phi;
 
-  printf("\n");
+  /*printf("\n");*/
 }
 void ImGray2UYVU(unsigned char *frame, unsigned char *grayFrame, int imW, int imH)
 {
