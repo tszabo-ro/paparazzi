@@ -199,9 +199,9 @@ void angle_matcher(void){
 
     int dn = arena.dn;
     int sn = arena.sn;
-    printf("Matching sn: %i, dn: %i\n",arena.sn,arena.dn);
-    printarr_float(arena.angles_s,10);
-    printarr_float(arena.angles_d,10);
+    /*printf("Matching sn: %i, dn: %i\n",arena.sn,arena.dn);*/
+    /*printarr_float(arena.angles_s,10);*/
+    /*printarr_float(arena.angles_d,10);*/
 
 
     if(dn == 0||sn == 0) return;
@@ -593,7 +593,7 @@ void obstacle_add(float gamma){
     arena.obs[freeslot].xy = vec2d_init(lside,lside);
     arena.obs[freeslot].err = INFINITY;
     arena.sn++;
-    printf("Obstacle added gamma: %.3f slot: %i\n",gamma,freeslot);
+    /*printf("Obstacle added gamma: %.3f slot: %i\n",gamma,freeslot);*/
 }
 void obstacle_destroy(int i){
 
@@ -603,7 +603,7 @@ void obstacle_destroy(int i){
     obstacle obs;
     obs.err = INFINITY;
     arena.obs[i]=obs;
-    printf("Obstacle destroyed slot: %i\n",i);
+    /*printf("Obstacle destroyed slot: %i\n",i);*/
 }
 void obstacle_update(float gamma, int i){
 
@@ -623,11 +623,11 @@ void obstacle_update(float gamma, int i){
         arena.obs[i].n_tracked++;
 
         arena.obs[i].err = vec2d_dist(&xy_n,xy_p);
-        printf("(%.2f,%.2f),(%.2f,%.2f)\n",arena.obs[i].orig.x,arena.obs[i].orig.y,arena.obs[i].upd.x,arena.obs[i].upd.y);
-        printf("curr at: %.3f,%.3f\n",xy_n.x,xy_n.y);
-        printf("prev at: %.3f,%.3f\n",xy_p->x,xy_p->y);
-        printf("new at: %.3f,%.3f\n",arena.obs[i].xy.x,arena.obs[i].xy.y);
-    printf("Obstacle updated gamma: %.3f slot: %i\n",gamma,i);
+        /*printf("(%.2f,%.2f),(%.2f,%.2f)\n",arena.obs[i].orig.x,arena.obs[i].orig.y,arena.obs[i].upd.x,arena.obs[i].upd.y);*/
+        /*printf("curr at: %.3f,%.3f\n",xy_n.x,xy_n.y);*/
+        /*printf("prev at: %.3f,%.3f\n",xy_p->x,xy_p->y);*/
+        /*printf("new at: %.3f,%.3f\n",arena.obs[i].xy.x,arena.obs[i].xy.y);*/
+        /*printf("Obstacle updated gamma: %.3f slot: %i\n",gamma,i);*/
     }
 
 
@@ -660,6 +660,7 @@ void obstacle_update(float gamma, int i){
                         sig = MAXSCORE/(1+exp(dist*arena.dl12-12));
                         /*sig = 100;*/
 
+                        printf("Weights updated! %i,%i :%f",loc_x_tmp,loc_y,sig);
 
                         arena.grid_weights_obs[loc_w]=\
                             (arena.grid_weights_obs[loc_w]>sig)?\
@@ -739,7 +740,7 @@ void arena_update(float v[],int n){
     /*printarr_float(v,OBS_SLOTS);*/
     /*printf("%i",n);*/
 
-    printf("arena_update v:%.3f n:%i\n",v[0],n);
+    /*printf("arena_update v:%.3f n:%i\n",v[0],n);*/
     int i;
     int j;
     if(n>0){
@@ -772,31 +773,31 @@ void navigate(void){
     float vision_tmp[OBS_SLOTS];
     int n_tmp = 0;
     request_obstacles(vision_tmp,&n_tmp);
-    printf("navigate() v: %.3f n:%i\n",vision_tmp[0],n_tmp);
+    /*printf("navigate() v: %.3f n:%i\n",vision_tmp[0],n_tmp);*/
 
 
 
-    float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
+    /*float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);*/
 
-    if(range<0.7){
-        int best;
-        float q;
-        plan_action(veh.gridij[0],veh.gridij[1],veh.o_disc,&best,&q);
-        int new_i =veh.gridij[0]+arena.st_wp_i[best]; 
-        int new_j =veh.gridij[1]+arena.st_wp_j[best]; 
-        veh.gridij[0] = new_i;
-        veh.gridij[1] = new_j;
+    /*if(range<0.7){*/
+    /*int best;*/
+    /*float q;*/
+    /*plan_action(veh.gridij[0],veh.gridij[1],veh.o_disc,&best,&q);*/
+    /*int new_i =veh.gridij[0]+arena.st_wp_i[best]; */
+    /*int new_j =veh.gridij[1]+arena.st_wp_j[best]; */
+    /*veh.gridij[0] = new_i;*/
+    /*veh.gridij[1] = new_j;*/
 
-        set_discrete_wp(new_i,new_j,arena.st_headings[best]);
-        arena.grid_weights_exp[new_i*GRID_RES+new_j]++;
-        veh.o_disc = best;
-        printf("\n#############%i##############\n",counter_nav);
-        counter_nav++;
+    /*set_discrete_wp(new_i,new_j,arena.st_headings[best]);*/
+    /*arena.grid_weights_exp[new_i*GRID_RES+new_j]++;*/
+    /*veh.o_disc = best;*/
+    /*printf("\n#############%i##############\n",counter_nav);*/
+    /*counter_nav++;*/
 
 
-        return;
+    /*return;*/
 
-    }
+    /*}*/
 
 
 

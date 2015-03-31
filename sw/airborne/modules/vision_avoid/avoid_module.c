@@ -146,6 +146,7 @@ void opticflow_module_run(void)
     currentTargetHeading = vision_results.head_cmd;    
     currentTargetWPPos.x = vision_results.WP_pos_X;
     currentTargetWPPos.y = vision_results.WP_pos_Y;
+    avoid_nav_goto_wp();
   }
 }
 
@@ -198,13 +199,30 @@ bool markArenaLimsAsWp(uint8_t wpIndex)
 
 // Anton's navigation stuff
 void avoid_nav_goto_wp(void){
+    float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
+
+    if(range<0.7){
+        int best;
+        float q;
+        plan_action(veh.gridij[0],veh.gridij[1],veh.o_disc,&best,&q);
+        int new_i =veh.gridij[0]+arena.st_wp_i[best]; 
+        int new_j =veh.gridij[1]+arena.st_wp_j[best]; 
+        veh.gridij[0] = new_i;
+        veh.gridij[1] = new_j;
+
+        set_discrete_wp(new_i,new_j,arena.st_headings[best]);
+        arena.grid_weights_exp[new_i*GRID_RES+new_j]++;
+        veh.o_disc = best;
+        printf("\n#############%i##############\n",counter_nav);
+        counter_nav++;
+    }
     struct EnuCoor_i target_wp;
     target_wp.x = veh.wp_abs.x*256;
     target_wp.y = veh.wp_abs.y*256;
     target_wp.z = 1;
 
     horizontal_mode = HORIZONTAL_MODE_WAYPOINT;
-    VECT2_COPY(navigation_target, target_wp);
+    VECT3_COPY(navigation_target, target_wp);
     NavVerticalAutoThrottleMode(RadOfDeg(0.000000));
     nav_heading = ANGLE_BFP_OF_REAL(PI/2-veh.wp_abs.o);
 }

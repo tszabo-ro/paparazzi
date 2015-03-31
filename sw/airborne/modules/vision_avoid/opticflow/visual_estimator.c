@@ -66,14 +66,14 @@
 // Send the summed horizontal flow
 #define DOWNLINK_FLOWSUM 1
 
-//#define WITH_BINARY_IMAGE
+#define WITH_BINARY_IMAGE
 
 
 // Corner Detection
 #define MAX_FEATURE_COUNT 200
 
 // Peakdetector Threshold
-#define PEAKDETECTOR_THRESHOLD 0.5
+#define PEAKDETECTOR_THRESHOLD 0.4
 #define MINIMUM_FLOW_SCALE_VAL 20.0f
 
 
@@ -94,10 +94,12 @@
 
 // This will downscale the front camera image from (1280x720) to (320x180)
 #ifdef DOWNLINK_VIDEO
-  #define IMAGE_DOWNSIZE_FACTOR 8
+  #define IMAGE_DOWNSIZE_FACTOR 4
 #else
   #define IMAGE_DOWNSIZE_FACTOR 2
 #endif
+
+#define IMG_H_PIXCOUNT 		70
 
 
 
@@ -208,7 +210,7 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   // Framerate Measuring
   results->FPS = framerate_run();
 
-  printf("visual_estimator.c: Current FPS: %.2f ",results->FPS);
+  printf("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);
 
   // Downsize the image for processing
   ImResizeUYVU(visual_estimator.current_frame, visual_estimator.imgWidth, visual_estimator.imgHeight, 
@@ -393,10 +395,10 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum);
 
-  int smootherSize = (256/IMAGE_DOWNSIZE_FACTOR);
+  int smootherSize = 128;
 
-  cv_smoothAndNormalizeSum((float*)&flowSum, w, smootherSize,MINIMUM_FLOW_SCALE_VAL);
-  cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
+  cv_smoothAndNormalizeSum((float*)&flowSum, w, smootherSize, 20);
+  cv_peakFinder((float*)&flowSum, w, 0.4, &numPeaks, (float*)&peakAngles, FOV_W);
 //  float *angles;
 //  int nAngles;
 
@@ -460,7 +462,8 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
 #endif
 
 //  #warning !!!!!!!!!!!!!!!!!Navigation Disabled in visual_estimator.c!!!!!!!!!!!!!!!!!!!
-  navigate();
+  if (numPeaks > 0)  
+    navigate();
 
   results->WP_pos_X     = navTransportData.currentWpLocationX;
   results->WP_pos_Y     = navTransportData.currentWpLocationY;
