@@ -38,6 +38,8 @@
 extern void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *results);
 extern void opticflow_plugin_free(void);
 
+extern void  nav_print_full_report(void);
+
 extern void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults* results);
 
 extern void ImGray2UYVU(unsigned char *frame, unsigned char *grayFrame, int imW, int imH);

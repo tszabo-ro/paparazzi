@@ -33,6 +33,7 @@
 #include "../../math/pprz_geodetic_int.h"
 
 // Anton's Avoidance stuff
+unsigned char avoid_nav_init;
 struct EnuCoor_i nav_avoid_carrot;
 float flight_check_counter;
 
@@ -48,7 +49,7 @@ extern void opticflow_module_run(void);
 extern void opticflow_module_start(void);
 extern void opticflow_module_stop(void);
 
-
+extern bool avoid_module_post_ahrs_init(void);
 extern bool vision_avoid_update_WP(uint8_t wpID);
 extern bool markArenaLimsAsWp(uint8_t wpIndex);
 

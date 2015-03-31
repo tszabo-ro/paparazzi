@@ -7,6 +7,9 @@
 
 #define OBS_AVOID_ON
 
+
+unsigned char avoid_nav_init = 0;
+
 void sayhello(void)
 {
     printf("hello!\n");
@@ -660,7 +663,7 @@ void obstacle_update(float gamma, int i){
                         sig = MAXSCORE/(1+exp(dist*arena.dl12-12));
                         /*sig = 100;*/
 
-                        printf("Weights updated! %i,%i :%f",loc_x_tmp,loc_y,sig);
+                        printf("Weights updated! %i,%i :%f\n",loc_x_tmp,loc_y,sig);
 
                         arena.grid_weights_obs[loc_w]=\
                             (arena.grid_weights_obs[loc_w]>sig)?\
@@ -756,7 +759,7 @@ void arena_update(float v[],int n){
             }
         }
         else{
-            arena_report();
+            /*arena_report();*/
             for(j=0;j<OBS_SLOTS;j++)arena.angles_d[j] = v[j];
             arena.dn = n;
             angle_matcher();
@@ -769,6 +772,8 @@ void arena_update(float v[],int n){
 
 }
 void navigate(void){
+    if (!avoid_nav_init) 
+	return;
     request_position();
     float vision_tmp[OBS_SLOTS];
     int n_tmp = 0;

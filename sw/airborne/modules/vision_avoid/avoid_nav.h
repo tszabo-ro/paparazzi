@@ -25,14 +25,14 @@ float seta;
 float mav_xy[2];
 #define PI 3.14159265358979323846
 
-#define OBS_SLOTS 20
+#define OBS_SLOTS 100
 #define GRID_RES 20
 /*Tracker settings*/
-#define TRACKING_LIMIT 0.5 
+#define TRACKING_LIMIT 0.1 
 /*Detection thresholds*/
-#define MAXERROR 10
+#define MAXERROR 0.5
 #define MIN_PARALLAX 0.0
-#define MIN_SPREAD 0.0
+#define MIN_SPREAD 0.4
 /*Grid weights settings */
 #define MAXSCORE 100
 /*Simulated obstacle settings*/

@@ -140,7 +140,6 @@ void *computervision_thread_main(void *args)
 
     // Run Image Processing with image and data and get results
     opticflow_plugin_run(img->buf, &autopilot_data, &vision_results);
-
     //printf("Vision result %f %f\n", vision_results.Velx, vision_results.Vely);
 
     /* Send results to main */

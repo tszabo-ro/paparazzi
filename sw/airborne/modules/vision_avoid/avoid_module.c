@@ -143,9 +143,9 @@ void opticflow_module_run(void)
     ////////////////////////////////////////////
     DEBUG_INFO("[module] Read vision %d\n",vision_results.cnt);
     
-    currentTargetHeading = vision_results.head_cmd;    
-    currentTargetWPPos.x = vision_results.WP_pos_X;
-    currentTargetWPPos.y = vision_results.WP_pos_Y;
+    /*currentTargetHeading = vision_results.head_cmd;    */
+    /*currentTargetWPPos.x = vision_results.WP_pos_X;*/
+    /*currentTargetWPPos.y = vision_results.WP_pos_Y;*/
     avoid_nav_goto_wp();
   }
 }
@@ -173,7 +173,13 @@ void opticflow_module_stop(void)
   computervision_thread_request_exit();
 }
 
-
+bool avoid_module_post_ahrs_init(void)
+{
+  init_map();
+  vehicle_cache_init();
+  avoid_nav_init = 1;
+  return true;
+}
 // Function to be called from the flight plan!
 bool vision_avoid_update_WP(uint8_t wpID)
 { 
@@ -200,6 +206,7 @@ bool markArenaLimsAsWp(uint8_t wpIndex)
 // Anton's navigation stuff
 void avoid_nav_goto_wp(void){
     float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
+    /*printf("range %f\n",range);*/
 
     if(range<0.7){
         int best;
@@ -213,7 +220,7 @@ void avoid_nav_goto_wp(void){
         set_discrete_wp(new_i,new_j,arena.st_headings[best]);
         arena.grid_weights_exp[new_i*GRID_RES+new_j]++;
         veh.o_disc = best;
-        printf("\n#############%i##############\n",counter_nav);
+        /*printf("\n#############%i##############\n",counter_nav);*/
         counter_nav++;
     }
     struct EnuCoor_i target_wp;

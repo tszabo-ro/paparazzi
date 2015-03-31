@@ -212,7 +212,7 @@ void cv_peakFinder(float *flowSum, int NCols, float threshold, int *np, float *a
   
   while (dest < *np)
   {
-    angle[dest] = ((*(src++)/(NCols+2))-0.5)*visualAngle;
+    angle[dest++] = ((*(src++)/(NCols+2))-0.5)*visualAngle;
     if (isLeft)
     { src = R; isLeft = 0; }
     else

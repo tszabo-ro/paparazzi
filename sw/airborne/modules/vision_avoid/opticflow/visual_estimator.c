@@ -114,15 +114,15 @@
 #endif
 
 // This will downscale the front camera image from (1280x720) to (320x180)
-#ifdef AVOID_BASED_ON_COLOR
-    #define IMAGE_DOWNSIZE_FACTOR 1
-#else
+//#ifdef AVOID_BASED_ON_COLOR
+//    #define IMAGE_DOWNSIZE_FACTOR 1
+//#else
   #ifdef DOWNLINK_VIDEO
-    #define IMAGE_DOWNSIZE_FACTOR 2
+    #define IMAGE_DOWNSIZE_FACTOR 4
   #else
     #define IMAGE_DOWNSIZE_FACTOR 1
   #endif
-#endif
+//#endif
 
 #define IMG_H_PIXCOUNT 		70
 
@@ -208,9 +208,9 @@ void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *res
 #endif
 
 #ifdef WITH_NAVIGATION
-// Initialize obstacle map  
-  init_map();
-  vehicle_cache_init();
+// Initialize obstacle map   <= It's done from the flight plan via avoid_module_post_ahrs_init()
+//  init_map();
+//  vehicle_cache_init();
 #else
   #warning Navigation Disabled!
 #endif
@@ -239,8 +239,20 @@ void opticflow_plugin_free(void)
   harris_free(&harrisData);
 #endif
 }
+
+/////////////////////////////////////////////////////
+//// Debug stuff
+/////////////////////////////////////////////////////
+int printfCounter = 0;
+
+
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
 {
+if(printfCounter > 10)
+{  nav_print_full_report(); printfCounter = 0; }
+else
+  ++printfCounter;
+
   // Corner Tracking
   // Working Variables
 //  int max_count = 25;
@@ -445,8 +457,8 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   
   navTransportData.stateWpStatus    = (info->targetDist < 0.1f); // Threshold on reaching the target is set to 0.1 meters!
   
-  float peakAngles[10];
-  int   numPeaks = 10;  
+  float peakAngles[100];
+  int   numPeaks = 100;  
   float flowSum[w];
 #ifndef AVOID_BASED_ON_COLOR
   printf("nF: %d ", results->flow_count);
@@ -455,7 +467,6 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum);
 
   int smootherSize = 128;
-
 #else
   float maxSum = 0;
   for (int i=0; i < w; ++i)
@@ -469,15 +480,15 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
     flowSum[i] = (float)colSum;
     if (flowSum[i] > maxSum)
       maxSum = flowSum[i];
-  }
 
+  }
   // Normalize the sum
   for (int i=0; i < w; ++i)
+  {
     flowSum[i] /= maxSum;
-
+  }
 #endif
   cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
-
   flowPeaks.angles = (float*)&peakAngles;
   flowPeaks.nAngles = numPeaks;
 #ifdef DOWNLINK_FLOWSUM
@@ -536,7 +547,6 @@ void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CV
     #endif
   #endif
 #endif
-
 //  #warning !!!!!!!!!!!!!!!!!Navigation Disabled in visual_estimator.c!!!!!!!!!!!!!!!!!!!
 #ifdef WITH_NAVIGATION
   if (numPeaks > 0)
@@ -630,4 +640,41 @@ void ImResizeUYVU(unsigned char *output, int imWOut, int imHOut, unsigned char *
     // read 1 in every 'downsample' rows, so skip (downsample-1) rows after reading the first
     source += (downsample-1) * imWIn * 2;
   }
+}
+
+
+
+
+void nav_print_full_report(void)
+{
+#ifdef WITH_NAVIGATION
+    printf("Status report:\n");
+
+    printf("Curr. position: (abs,grd,discrete) %.2f,%.2f %.2f,%.2f %i,%i\n",\
+    veh.xy_abs.x,veh.xy_abs.y,veh.xy_g.x,veh.xy_g.y,veh.gridij[0],veh.gridij[1]);
+    printf("Curr. wp. setting: (abs,grd) %.2f,%.2f,%.2f,%.2f\n",\
+    veh.wp_abs.x,veh.xy_abs.y,veh.wp_g.x,veh.wp_g.y);
+    float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
+    printf("Range to next waypoint: %f\n",range);
+    printf("Current field of view:\n");
+    printarr_float(arena.angles_s,OBS_SLOTS);
+    printf("Currently tracked obstacles:\n");
+
+    int i;
+    obstacle o;
+
+    for(i=0;i<arena.sn;i++){
+        o = arena.obs[i];
+        printf("%i: original fix at %f,%f, latest fix at %f,%f, angle1: %f, angle2: %f current xy fix %f,%f\n)",\
+        o.orig.x,o.orig.y,o.upd.x,o.upd.y,o.gamma_orig,o.gamma_upd,o.xy.x,o.xy.y);
+    }
+
+
+    printf("Current obstacle weights\n");
+
+    print2darr_float(arena.grid_weights_obs,GRID_RES,GRID_RES);
+    
+
+
+#endif
 }
