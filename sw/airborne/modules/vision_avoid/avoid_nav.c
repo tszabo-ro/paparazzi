@@ -6,7 +6,9 @@
 #include "avoid_nav_transportFcns.h"
 
 #define OBS_AVOID_ON
-
+#ifdef AVOID_NAV_DEBUG
+  float nav_debug_downlink[AVOID_NAV_DEBUG_DOWNLINK_SIZE];
+#endif
 
 unsigned char avoid_nav_init = 0;
 

@@ -27,11 +27,26 @@
  * Warning: all this code is called form the Vision-Thread: do not access any autopilot data in here.
  */
 
+/////////////////////////////////////////////////////////////////////////////////
+/// Includes
+/////////////////////////////////////////////////////////////////////////////////
 #include "std.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+// PeakFinder function
+#include "../peakfinder.h"
+#include "../avoid_nav.h"
+
+// Debug defines & macros
+#include "debug_nav.h"
+
+// Image related includes
+#include "encoding/rtp.h"
+#include "resize.h"
+#include "image.h"
 
 // Own Header
 #include "visual_estimator.h"
@@ -39,10 +54,36 @@
 // Computer Vision
 #include "opticflow/optic_flow_int.h"
 
+// for FPS
+#include "modules/computer_vision/cv/framerate.h"
+
+// Avoidance headers
+#include "../avoid_nav_transportFcns.h"
+
+/////////////////////////////////////////////////////////////////////////////////
+/// Module defines
+/////////////////////////////////////////////////////////////////////////////////
 
 #define AVOID_BASED_ON_COLOR
-//#define USE_HARRIS_DETECTOR
 #define WITH_NAVIGATION
+#define WITH_BINARY_IMAGE
+
+// Corner Detection
+#define MAX_FEATURE_COUNT 200
+
+// Peakdetector Threshold
+#define PEAKDETECTOR_THRESHOLD 0.4
+#define MINIMUM_FLOW_SCALE_VAL 20.0f
+
+// ARDrone Vertical Camera Parameters
+
+// Bottom Camera
+//#define FOV_H 0.67020643276
+//#define FOV_W 0.89360857702
+
+// Front Camera
+#define FOV_W 1.60570291184
+
 
 #ifdef AVOID_BASED_ON_COLOR
    #pragma message("Avoiding based on color!")
@@ -59,43 +100,21 @@
   #endif
 #endif
 
-// for FPS
-#include "modules/computer_vision/cv/framerate.h"
-
-// Avoidance headers
-#include "../avoid_nav_transportFcns.h"
-
-// PeakFinder function
-#include "../peakfinder.h"
-#include "../avoid_nav.h"
-
-#include "encoding/rtp.h"
-
-#include "resize.h"
-#include "image.h"
-
-// Downlink Video
-//#define DOWNLINK_VIDEO 	          
-#define DEBUG_VIDEO 	            1
-#define DEBUG_MARK_FEATUREPOINTS  1
-#define DEBUG_MARK_FLOWSUM        1
-
-#define DEBUG_OVERLAY_COLOR       255
-
-// Send the summed horizontal flow
-#define DOWNLINK_FLOWSUM 1
-
-#define WITH_BINARY_IMAGE
+// This will downscale the front camera image from (1280x720) to (320x180)
+//#ifdef AVOID_BASED_ON_COLOR
+//    #define IMAGE_DOWNSIZE_FACTOR 1
+//#else
+  #ifdef DOWNLINK_VIDEO
+    #define IMAGE_DOWNSIZE_FACTOR 4
+  #else
+    #define IMAGE_DOWNSIZE_FACTOR 1
+  #endif
+//#endif
 
 
-// Corner Detection
-#define MAX_FEATURE_COUNT 200
-
-// Peakdetector Threshold
-#define PEAKDETECTOR_THRESHOLD 0.4
-#define MINIMUM_FLOW_SCALE_VAL 20.0f
-
-
+/////////////////////////////////////////////////////////////////////////////////
+/// Variable definitions
+/////////////////////////////////////////////////////////////////////////////////
 
 #ifdef DOWNLINK_FLOWSUM
   #pragma message("Horizontal Flow & arena map downlink enabled")
@@ -112,21 +131,6 @@
   uint8_t *downlinkBufferGray;
   uint8_t *jpegbuf;
 #endif
-
-// This will downscale the front camera image from (1280x720) to (320x180)
-//#ifdef AVOID_BASED_ON_COLOR
-//    #define IMAGE_DOWNSIZE_FACTOR 1
-//#else
-  #ifdef DOWNLINK_VIDEO
-    #define IMAGE_DOWNSIZE_FACTOR 4
-  #else
-    #define IMAGE_DOWNSIZE_FACTOR 1
-  #endif
-//#endif
-
-#define IMG_H_PIXCOUNT 		70
-
-
 
 // Local variables
 #ifdef USE_HARRIS_DETECTOR
@@ -157,14 +161,6 @@ struct visual_estimator_struct
   float prev_yaw;
 } visual_estimator;
 
-// ARDrone Vertical Camera Parameters
-
-// Bottom Camera
-//#define FOV_H 0.67020643276
-//#define FOV_W 0.89360857702
-
-// Front Camera
-#define FOV_W 1.60570291184
 
 // Called by plugin
 void opticflow_plugin_init(unsigned int w, unsigned int h, struct CVresults *results)
@@ -494,7 +490,12 @@ else
 #ifdef DOWNLINK_FLOWSUM
   { 
     int nS = w*2;
-    unsigned char txBuf[nS];
+#ifdef AVOID_NAV_DEBUG
+    unsigned char txBuf[nS+AVOID_NAV_DEBUG_DOWNLINK_SIZE*sizeof(float)]
+#else
+    unsigned char txBuf[nS]
+#endif
+;
     for (int i=0; i < w; ++i)
     {
       float V = (100.0f*flowSum[i]);
@@ -507,8 +508,14 @@ else
       else
         txBuf[i+w] = 0;
     }
+#ifdef AVOID_NAV_DEBUG
+    memcpy(&txBuf+nS, &nav_debug_downlink, AVOID_NAV_DEBUG_DOWNLINK_SIZE*sizeof(float));
+    if (udp_write(flowSock, (unsigned char*)&txBuf, (nS + (AVOID_NAV_DEBUG_DOWNLINK_SIZE*sizeof(float)))) != (nS + (AVOID_NAV_DEBUG_DOWNLINK_SIZE*sizeof(float))))
+      printf("UDP write error! ");
+#else
     if (udp_write(flowSock, (unsigned char*)&txBuf, nS) != nS)
       printf("UDP write error! ");
+#endif
   }
   {
     unsigned char obsMap[GRID_RES*GRID_RES*2];
