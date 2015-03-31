@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include "../cv/opticflow/optic_flow_int.h"
 /*
 // Peak finder Function
 // Note that the optical flow values is an INT, because it corresponds to the number of shifted PIXELS
@@ -195,35 +196,36 @@ void cv_peakFinder(float *flowSum, int NCols, float threshold, int *np, float *a
 			right[k++]=j; // vector with the index of the "descending" part of the peak
 
 	}
-	if (i < (*np))
-	{
-		//If there is less than 10 peaks, the other part of the vectors will be zero
-		for(j=i; j < (*np); ++j)
-		{
-			right[j]=NAN;
-			left[j]=NAN;
-		}
-	}
+#pragma message("@Anton: This is where the right and left edges of the peaks are calculated")
+  int m = i;
+  if (k > m)
+    m = k;
 
-  int dest = 0;
-  float *L = (float*)&left;
-  float *R = (float*)&right;
-  float* src = L;
-  char isLeft = 1;
-  
-  while (dest < *np)
+  int dCnt = 0;
+  int dest[2*i];
+  for (int l=0; l < m; ++l)
   {
-    angle[dest] = ((*src/(NCols+2))-0.5)*visualAngle;
-
-    ++dest;
-    ++src;
-    if (isLeft)
-    { src = R; isLeft = 0; }
-    else
-    { src = L; isLeft = 1; }
+    if (l < i)
+      dest[dCnt++] = ((left[l]/NCols) - 0.5)*visualAngle*100; // Use two decimal places, it's enough.
+    if (l < k)
+      dest[dCnt++] = ((right[l]/NCols) - 0.5)*visualAngle*100; // Use two decimal places, it's enough.
   }
 
-	*np = i; // Number of peaks
+  quick_sort_int((int*)&dest, dCnt-1);
+  dCnt=1;
+  angle[0] = dest[0]/100;
+  float ang;
+  for (int l=0; l < 2*i; ++l)
+  {
+    ang = ((float)dest[l])/100;
+    if (fabs(ang) > 1) // Dirty hack to get rid of calculation errors. It's 12 a.m. for ... sake.
+      continue;
+
+    if (fabs(angle[dCnt-1] - ang) > 0.06)
+      angle[dCnt++] = ang;
+  }
+
+	*np = dCnt; // Number of peaks
 //
 //	for(j=0; j<10; ++j)
 //	{
