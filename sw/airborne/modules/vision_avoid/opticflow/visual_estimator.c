@@ -74,7 +74,7 @@
 #define MAX_FEATURE_COUNT 200
 
 // Peakdetector Threshold
-#define PEAKDETECTOR_THRESHOLD  0.4
+#define PEAKDETECTOR_THRESHOLD  0.2
 #define MINIMUM_FLOW_SCALE_VAL  20.0f
 #define COLOR_MIN_SUM           50
 
@@ -228,14 +228,14 @@ int printfCounter = 0;
 
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
 {
-    /*printf("fuck\n");*/
+/*
 //#ifdef DEBUG_CONSOLE_PRINT
 if(printfCounter > 10)
 {  nav_print_full_report(); printfCounter = 0; }
 else
   ++printfCounter;
 //#endif
-
+*/
   // Corner Tracking
   // Working Variables
 
@@ -249,8 +249,6 @@ else
 
   int w = visual_estimator.imgWidth;
   int h = visual_estimator.imgHeight;
-
-
 
   // Framerate Measuring
   results->FPS = framerate_run();
@@ -267,7 +265,6 @@ else
 #else
   ImUYVU2Gray(visual_estimator.gray_frame, visual_estimator.current_frame, w, h); // <= not really grayscale image though.
 #endif
-
 // Convert the image to binary
 #ifdef WITH_BINARY_IMAGE
   double pxValSum = 0;
@@ -434,13 +431,12 @@ else
   // *************************************************************************************
   // This is where the avoidance magic happen!
   // *************************************************************************************
-  
   navTransportData.stateEnuPosX     = info->enuPosX;
   navTransportData.stateEnuPosY     = info->enuPosY;
   navTransportData.stateEnuHeading  = info->psi;
   
   navTransportData.stateWpStatus    = (info->targetDist < 0.1f); // Threshold on reaching the target is set to 0.1 meters!
-  
+
   float peakAngles[100];
   int   numPeaks = 100;  
   float flowSum[w];
@@ -449,41 +445,47 @@ else
 
 
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum);
-
   int smootherSize = 128;
 #else
-  float maxSum = 0;
   for (int i=0; i < w; ++i)
   {
     double colSum = 0;
     for (int j=0; j < h; ++j) // Sum the pixel values over the height of the image
       colSum +=visual_estimator.gray_frame[i + j*w];
     
+    if (colSum/(h*255))
     colSum /= h; // Normalize by height;
 
     flowSum[i] = (float)colSum;
-    if (flowSum[i] > maxSum)
-      maxSum = flowSum[i];
-
   }
-  if (maxSum < COLOR_MIN_SUM)
-    maxSum = COLOR_MIN_SUM;
-
-  // Normalize the sum
+#pragma message("@Anton: flowSum is the vertical sum of the intensity. PEAKDETECTOR_THRESHOLD is the threshold used. ")
+  
+#ifdef DEBUG_DEBUG
+  printf("\n");
+  printf("Biary Image Sum:\n");
   for (int i=0; i < w; ++i)
-    flowSum[i] /= maxSum;
+  {
+    if ( flowSum[i] > PEAKDETECTOR_THRESHOLD )
+      printf("1 ");
+    else
+      printf("0 ");
+  }
+  printf("\n\n");
 #endif
-  cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
+
+#endif
+#pragma message("@Anton: This is where the peak detection is called")
+//  cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
+  cv_peakFinder((float*)&flowSum, w, 0, &numPeaks, (float*)&peakAngles, FOV_W);
+
+  // Variables to the navigation module
   flowPeaks.angles = (float*)&peakAngles;
   flowPeaks.nAngles = numPeaks;
 
-/*  if (numPeaks > 0)
-    results->angle = peakAngles[0];*/
-
-  N_LOG("\n");
-  for (int i=0; i < flowPeaks.nAngles; ++i)
-    N_LOG("%.2f ", peakAngles[i]);
-  N_LOG("\n");
+  V_LOG("\nAngles: \n");
+  for (int i=1; i < flowPeaks.nAngles; ++i)
+    V_LOG("%.2f ", peakAngles[i]);
+  V_LOG("\n");
 #ifdef DOWNLINK_FLOWSUM
   { 
     int nS = w*2;
@@ -619,8 +621,12 @@ void ImUYVU2Gray(unsigned char *grayFrame, unsigned char *frame, int imW, int im
   src+=2; // This is the first V
   while ((dest - grayFrame) < imW*imH)
   {
-    *dest++ = *src; // Use it for both pixel values
-    *dest++ = *src;
+    if ( (*src > 155) && (*(src-2) > 100) )
+    { *dest++ = 1; *dest++ = 1;}
+    else
+    { *dest++ = 0; *dest++ = 0;}
+//    *dest++ = *src; // Use it for both pixel values
+//    *dest++ = *src;
     src += 4;       // Go to the next V value
   }
 #endif

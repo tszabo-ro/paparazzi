@@ -942,8 +942,8 @@ void nav_print_full_report(void)
 
 
     float v[OBS_SLOTS];
-
-    request_obstacles(&v,OBS_SLOTS);
+    int tmp = OBS_SLOTS;
+    request_obstacles((float*)&v,&tmp);
 
     printf("Status report:\n");
     printf("Angles coming in:\n");

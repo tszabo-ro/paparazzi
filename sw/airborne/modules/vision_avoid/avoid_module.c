@@ -83,7 +83,21 @@ static void agl_cb(uint8_t sender_id __attribute__((unused)), float distance)
 #define DEBUG_INFO(X, ...) ;
 
 void opticflow_module_init(void)
+{/*
 {
+    vec2d a,b,c;
+    float gamma1,gamma2;
+
+    a = vec2d_init(0.45,0);
+    b = vec2d_init(0,0);
+    gamma1 = -0.04;//vision_results.angle;
+
+    gamma2 = -0.6;//vision_results.angle;
+    c = vec2d_triangulate(&a,&b,gamma1,gamma2);
+    printf("\n\n\nCoords: %f,%f\n\n\n\n",c.x,c.y);
+    perror("bla");
+}*/
+
   // get AGL from sonar via ABI
 //  AbiBindMsgAGL(OPTICFLOW_AGL_ID, &agl_ev, agl_cb);
 
@@ -182,6 +196,8 @@ bool avoid_module_post_ahrs_init(void)
 // Function to be called from the flight plan!
 bool vision_avoid_update_WP(uint8_t wpID)
 { 
+  avoid_nav_goto_wp();
+  /*
   // Move the WP to its target location
   nav_set_waypoint_enu_f(wpID, (struct EnuCoor_f*)&currentTargetWPPos);
   
@@ -190,7 +206,7 @@ bool vision_avoid_update_WP(uint8_t wpID)
   
   // Go to the moved waypoint
   NavGotoWaypoint(wpID);
-  
+  */
   return true;
 }
 bool markArenaLimsAsWp(uint8_t wpIndex)
@@ -219,7 +235,6 @@ void avoid_nav_goto_wp(void){
         set_discrete_wp(new_i,new_j,arena.st_headings[best]);
         arena.grid_weights_exp[new_i*GRID_RES+new_j]++;
         veh.o_disc = best;
-        /*printf("\n#############%i##############\n",counter_nav);*/
         counter_nav++;
     }
     struct EnuCoor_i target_wp;
@@ -246,9 +261,9 @@ bool_t avoid_map_init(void) {
     printf("Initializing arena\n");
     
     printf("Running init_map()...\n");
-    init_map();
-    printf("Running vehicle_cache_init()... ");
-    vehicle_cache_init();
+//    init_map();
+//    printf("Running vehicle_cache_init()... ");
+//    vehicle_cache_init();
     printf("OK\n");
 
 #ifndef OPTI_REAL
@@ -275,25 +290,3 @@ bool_t avoid_map_init(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 /////////// DEBUG!!!
-vec2d a,b,c;
-float gamma1,gamma2;
-
-bool bang1(void){
-    a = vec2d_init(0.9,0);
-    b = vec2d_init(0,0);
-    gamma1 = vision_results.angle;
-
-  return false;
-}
-
-
-bool bang2(void){
-    gamma2 = vision_results.angle;
-  return false;
-}
-bool n_print_output(void){
-    c = vec2d_triangulate(&a,&b,gamma1,gamma2);
-    printf("\n\n\nCoords: %f,%f\n\n\n\n",c.x,c.y);
-  return false;
-}
-
