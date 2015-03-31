@@ -929,6 +929,18 @@ void init_map(void) {
 
 void nav_print_full_report(void)
 {
+
+
+    nav_debug_downlink[0]=arena.obs[0].xy.x;
+    nav_debug_downlink[1]=arena.obs[0].xy.y;
+    nav_debug_downlink[2]=arena.obs[0].xy_n.x;
+    nav_debug_downlink[3]=arena.obs[0].xy_n.y;
+    nav_debug_downlink[4]=arena.obs[1].xy.x;
+    nav_debug_downlink[5]=arena.obs[1].xy.y;
+    nav_debug_downlink[6]=arena.obs[1].xy_n.x;
+    nav_debug_downlink[7]=arena.obs[1].xy_n.y;
+    nav_debug_downlink[8]=arena.obs[1].err;
+    nav_debug_downlink[9]=arena.obs[1].err;
 #ifdef WITH_NAVIGATION
     printf("Status report:\n");
 
