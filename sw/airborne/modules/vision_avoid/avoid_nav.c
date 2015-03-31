@@ -5,6 +5,9 @@
 
 #include "avoid_nav_transportFcns.h"
 
+#include <time.h>
+#include <stdio.h>
+
 #define OBS_AVOID_ON
 #ifdef AVOID_NAV_DEBUG
   float nav_debug_downlink[AVOID_NAV_DEBUG_DOWNLINK_SIZE];
@@ -43,7 +46,7 @@ vec2d vec2d_init(float x, float y) {
     v.x = x;
     v.y = y;
     v.o = 0;
-    return v;
+ }  return v;
 }
 vec2d vec2d_init_o(float x, float y, float o) {
     vec2d v;
@@ -997,3 +1000,50 @@ void nav_print_full_report(void)
 
     /*#endif*/
 }
+
+
+#define NTEST 0
+int test_all;
+float angle1;
+float angle2;
+
+vec2d xy_1;
+vec2d xy_2;
+
+int cccounter;
+void testing_routines(void){
+
+switch(test_all)
+    case 1:
+
+    printf("Running angle checks\n");
+    printf("Place drone in position 1\n");
+    /*do something*/
+    break;
+    
+    case 2:
+    printf("Place drone in position 2...");
+    break;
+
+    /*do something*/
+    case 3:
+    printf("Running triangulation checks\n");
+    printf("Place drone in position 1...");
+    break;
+
+    case 4:
+    printf("Place drone in position 2...");
+    break;
+
+
+    case 5:
+    printf("Running tracking checks\n");
+    printf("Move the drone around...");
+
+
+
+
+}
+
+
+

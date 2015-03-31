@@ -447,11 +447,7 @@ else
   int   numPeaks = 100;  
   float flowSum[w];
 #ifndef AVOID_BASED_ON_COLOR
-<<<<<<< HEAD
-  /*printf("nF: %d ", results->flow_count);*/
-=======
   V_LOG("nF: %d ", results->flow_count);
->>>>>>> 54c720044d134aa862a910fc65c503758c17c649
 
 
   cv_flowSum((int*)&x, (int*)&dx, results->flow_count, w, (float*)&flowSum);
@@ -482,6 +478,9 @@ else
   cv_peakFinder((float*)&flowSum, w, PEAKDETECTOR_THRESHOLD, &numPeaks, (float*)&peakAngles, FOV_W);
   flowPeaks.angles = (float*)&peakAngles;
   flowPeaks.nAngles = numPeaks;
+
+/*  if (numPeaks > 0)
+    results->angle = peakAngles[0];*/
 
   N_LOG("\n");
   for (int i=0; i < flowPeaks.nAngles; ++i)
