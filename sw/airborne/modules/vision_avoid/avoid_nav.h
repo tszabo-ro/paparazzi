@@ -159,6 +159,7 @@ vec2d grd2hme_o(vec2d* a);
 vec2d hme2grd_o(vec2d* a);
 float vec2d_dist(vec2d *a, vec2d * b);
 void printarr_float(float a[],int n);
+void printarr_float_angles(float a[],int n);
 void printarr_int(int a[],int n);
 void print2darr_float(float* a,int n, int m);
 void sw_arr_int(int *a,int s,int d);

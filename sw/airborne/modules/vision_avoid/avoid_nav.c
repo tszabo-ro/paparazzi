@@ -150,6 +150,15 @@ void printarr_float(float a[],int n){
     }
     printf("]\n");
 }
+void printarr_float_angles(float a[],int n){
+    int i;
+    printf("[");
+    for (i=0; i<n;i++) {
+
+        printf("%f, ",a[i]*180/PI);
+    }
+    printf("]\n");
+}
 void printarr_int(int a[],int n){
     int i;
     printf("[");
@@ -925,25 +934,42 @@ void init_map(void) {
 
 
 
-
+#define PRINT_THIS_SHIT
 
 void nav_print_full_report(void)
 {
 
 
+
+    float v[OBS_SLOTS];
+
+    request_obstacles(&v,OBS_SLOTS);
+
+    printf("Status report:\n");
+    printf("Angles coming in:\n");
+    printarr_float_angles(v,30);
+
+
+
+
+
+
+
+#ifndef PRINT_THIS_SHIT
+    int i;
+    obstacle o;
     nav_debug_downlink[0]=arena.obs[0].xy.x;
-    nav_debug_downlink[1]=arena.obs[0].xy.y;
-    nav_debug_downlink[2]=arena.obs[0].xy_n.x;
-    nav_debug_downlink[3]=arena.obs[0].xy_n.y;
-    nav_debug_downlink[4]=arena.obs[1].xy.x;
-    nav_debug_downlink[5]=arena.obs[1].xy.y;
-    nav_debug_downlink[6]=arena.obs[1].xy_n.x;
+    nav_debug_downlink[1]=arena.obs[0].xy_n.x;
+    nav_debug_downlink[2]=arena.obs[1].xy.x;
+    nav_debug_downlink[3]=arena.obs[1].xy_n.x;
+    nav_debug_downlink[4]=arena.obs[0].xy.y;
+    nav_debug_downlink[5]=arena.obs[0].xy_n.y;
+    nav_debug_downlink[6]=arena.obs[1].xy.y;
     nav_debug_downlink[7]=arena.obs[1].xy_n.y;
+
+
     nav_debug_downlink[8]=arena.obs[1].err;
     nav_debug_downlink[9]=arena.obs[1].err;
-#ifdef WITH_NAVIGATION
-    printf("Status report:\n");
-
     printf("Curr. position: (abs,grd,discrete) %.2f,%.2f %.2f,%.2f %i,%i\n",\
     veh.xy_abs.x,veh.xy_abs.y,veh.xy_g.x,veh.xy_g.y,veh.gridij[0],veh.gridij[1]);
     printf("Curr. wp. setting: (abs,grd) %.2f,%.2f,%.2f,%.2f\n",\
@@ -955,10 +981,7 @@ void nav_print_full_report(void)
     printf("Current field of view:\n");
     printarr_float(arena.angles_s,OBS_SLOTS);
     printf("Currently tracked obstacles:\n");
-
-    int i;
-    obstacle o;
-
+    /*#ifdef WITH_NAVIGATION*/
     for(i=0;i<arena.sn;i++){
         o = arena.obs[i];
         printf("%i: original fix at %f,%f, latest fix at %f,%f, angle1: %f, angle2: %f current xy fix %f,%f\n)",\
@@ -970,7 +993,7 @@ void nav_print_full_report(void)
 
     print2darr_float(arena.grid_weights_obs,GRID_RES,GRID_RES);
     
-
-
 #endif
+
+    /*#endif*/
 }

@@ -225,6 +225,7 @@ int printfCounter = 0;
 
 void opticflow_plugin_run(unsigned char *frame, struct PPRZinfo* info, struct CVresults *results)
 {
+    /*printf("fuck\n");*/
 //#ifdef DEBUG_CONSOLE_PRINT
 if(printfCounter > 10)
 {  nav_print_full_report(); printfCounter = 0; }
