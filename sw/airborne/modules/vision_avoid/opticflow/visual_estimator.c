@@ -645,36 +645,4 @@ void ImResizeUYVU(unsigned char *output, int imWOut, int imHOut, unsigned char *
 
 
 
-void nav_print_full_report(void)
-{
-#ifdef WITH_NAVIGATION
-    printf("Status report:\n");
 
-    printf("Curr. position: (abs,grd,discrete) %.2f,%.2f %.2f,%.2f %i,%i\n",\
-    veh.xy_abs.x,veh.xy_abs.y,veh.xy_g.x,veh.xy_g.y,veh.gridij[0],veh.gridij[1]);
-    printf("Curr. wp. setting: (abs,grd) %.2f,%.2f,%.2f,%.2f\n",\
-    veh.wp_abs.x,veh.xy_abs.y,veh.wp_g.x,veh.wp_g.y);
-    float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
-    printf("Range to next waypoint: %f\n",range);
-    printf("Current field of view:\n");
-    printarr_float(arena.angles_s,OBS_SLOTS);
-    printf("Currently tracked obstacles:\n");
-
-    int i;
-    obstacle o;
-
-    for(i=0;i<arena.sn;i++){
-        o = arena.obs[i];
-        printf("%i: original fix at %f,%f, latest fix at %f,%f, angle1: %f, angle2: %f current xy fix %f,%f\n)",\
-        o.orig.x,o.orig.y,o.upd.x,o.upd.y,o.gamma_orig,o.gamma_upd,o.xy.x,o.xy.y);
-    }
-
-
-    printf("Current obstacle weights\n");
-
-    print2darr_float(arena.grid_weights_obs,GRID_RES,GRID_RES);
-    
-
-
-#endif
-}

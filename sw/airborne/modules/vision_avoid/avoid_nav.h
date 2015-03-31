@@ -186,6 +186,12 @@ void navigate(void);
 void vehicle_cache_init(void);
 void init_map(void) ;
 
+
+
+extern void  nav_print_full_report(void);
+
+
+
     /*void init_map();*/
     /*void navigate();*/
     /*void vehicle_sim();*/
