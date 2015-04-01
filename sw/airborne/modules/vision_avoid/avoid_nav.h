@@ -24,6 +24,9 @@
   extern float nav_debug_downlink[AVOID_NAV_DEBUG_DOWNLINK_SIZE];
 #endif
 
+
+
+
 float lside;
 float eta;
 float ceta;
@@ -39,13 +42,30 @@ float mav_xy[2];
 /*Detection thresholds*/
 #define MAXERROR 0.5
 #define MIN_PARALLAX 0.0
-#define MIN_SPREAD 0.4
+#define MIN_SPREAD 0.2
 /*Grid weights settings */
 #define MAXSCORE 100
 /*Simulated obstacle settings*/
 //#define SIM_OBSTACLES 3
 //#define SIM_FOV 40
 
+#define PLAN_AHEAD
+#define PLAN_AHEADP1
+
+#define WEIGHTS_NORMALIZED
+
+#ifdef WEIGHTS_NORMALIZED
+#define WEIGHT_MAX 20.0
+#define WEIGHT_INCR 1.0
+#define WEIGHT_BASE 10.0
+
+#define WP_MINDIST 0.7
+
+
+float sig_tmp;
+float total_weight; 
+
+#endif
 #define OPTI_REAL
 
 typedef struct {
@@ -186,6 +206,7 @@ void obstacle_add(float gamma);
 void obstacle_destroy(int i);
 void obstacle_update(float gamma, int i);
 void plan_ahead(int i_loc, int j_loc, int head,float *q);
+void plan_aheadp1(int i_loc, int j_loc, int head,float *q);
 void plan_action(int i_loc, int j_loc, int head,int *best,float *q);
 void move(void);
 void arena_update(float v[],int n);

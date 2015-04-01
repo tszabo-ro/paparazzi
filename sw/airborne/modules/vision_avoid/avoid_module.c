@@ -223,7 +223,7 @@ void avoid_nav_goto_wp(void){
     float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
     /*printf("range %f\n",range);*/
 
-    if(range<0.7){
+    if(range<WP_MINDIST){
         int best;
         float q;
         plan_action(veh.gridij[0],veh.gridij[1],veh.o_disc,&best,&q);

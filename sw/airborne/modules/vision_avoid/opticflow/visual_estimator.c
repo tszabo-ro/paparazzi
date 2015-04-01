@@ -239,6 +239,11 @@ else
   // Corner Tracking
   // Working Variables
 
+if(printfCounter>10)
+{  printfCounter = 0; }
+else
+  ++printfCounter;
+test_angles(); 
 #ifndef AVOID_BASED_ON_COLOR
   int borderx = 24, bordery = 24;
   int x[MAX_FEATURE_COUNT], y[MAX_FEATURE_COUNT];
@@ -254,7 +259,7 @@ else
   results->FPS = framerate_run();
 
   /*printf("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);*/
-  V_LOG("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);
+  /*V_LOG("visual_estimator.c: ds: %d Current FPS: %.2f ",IMAGE_DOWNSIZE_FACTOR, results->FPS);*/
 
   // Downsize the image for processing
   ImResizeUYVU(visual_estimator.current_frame, visual_estimator.imgWidth, visual_estimator.imgHeight, 
@@ -484,10 +489,10 @@ else
   flowPeaks.angles = (float*)&peakAngles;
   flowPeaks.nAngles = numPeaks;
 
-  V_LOG("\nAngles: \n");
+  /*V_LOG("\nAngles: \n");*/
   for (int i=1; i < flowPeaks.nAngles; ++i)
-    V_LOG("%.2f ", peakAngles[i]);
-  V_LOG("\n");
+  /*V_LOG("%.2f ", peakAngles[i]);*/
+  /*V_LOG("\n");*/
 #ifdef DOWNLINK_FLOWSUM
   { 
     int nS = w*2;

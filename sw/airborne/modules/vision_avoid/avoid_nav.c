@@ -46,7 +46,7 @@ vec2d vec2d_init(float x, float y) {
     v.x = x;
     v.y = y;
     v.o = 0;
- }  return v;
+   return v;
 }
 vec2d vec2d_init_o(float x, float y, float o) {
     vec2d v;
@@ -457,9 +457,10 @@ void obstacle_sim_return_angle(float vv[],int *n){
         vv[i] = veh.xy_g.o-tmp.angle;
     }
     *n = SIM_OBSTACLES;
-    for(i=SIM_OBSTACLES;i<OBS_SLOTS;i++) vv[i] = NAN;
+ }  for(i=SIM_OBSTACLES;i<OBS_SLOTS;i++) vv[i] = NAN;
    
 }
+
 #else
 void request_arena_coord(float *coord){
     struct EnuCoor_f arena_corner[4];
@@ -542,6 +543,8 @@ void request_obstacles(float *v,int *n)
 //    *n = nn;
   memcpy(v, flowPeaks.angles,flowPeaks.nAngles*sizeof(float));
   *n = flowPeaks.nAngles;
+
+if(n>0){ v[0]=NAN; n--; };
 }
 
 
@@ -648,6 +651,7 @@ void obstacle_update(float gamma, int i){
     }
 
 
+
     if(arena.obs[i].err<MAXERROR&&spread>MIN_SPREAD){
         int loc_x;
         int loc_y;
@@ -664,13 +668,14 @@ void obstacle_update(float gamma, int i){
             float dist;
             int loc_w;
             float sig;
-
+            int grd_obs;
             for(m=-1;m<3;m++){
                 for(n=-1;n<3;n++){
                     loc_x_tmp = loc_x+m;
                     loc_y_tmp = loc_y+n;
 
                     if(loc_x_tmp>=0&&loc_y_tmp>=0&&loc_x_tmp<GRID_RES&&loc_y_tmp<GRID_RES){
+#ifndef WEIGHTS_NORMALIZED
                         vec2d_set(&gridlock,arena.gridx_coord[loc_x_tmp],arena.gridy_coord[loc_y_tmp]);
                         dist = vec2d_dist(&gridlock,&arena.obs[i].xy);
                         loc_w = loc_x_tmp*GRID_RES+loc_y_tmp;
@@ -682,6 +687,22 @@ void obstacle_update(float gamma, int i){
                         arena.grid_weights_obs[loc_w]=\
                             (arena.grid_weights_obs[loc_w]>sig)?\
                             arena.grid_weights_obs[loc_w]:sig;
+#else
+                            
+                        vec2d_set(&gridlock,arena.gridx_coord[loc_x_tmp],arena.gridy_coord[loc_y_tmp]);
+                        dist = vec2d_dist(&gridlock,&arena.obs[i].xy);
+                        loc_w = loc_x_tmp*GRID_RES+loc_y_tmp;
+                        sig = WEIGHT_INCR/(1+exp(dist*arena.dl12-12));
+                        /*sig = 100;*/
+                        if (arena.grid_weights_obs[loc_w]<=WEIGHT_MAX){
+                            sig_tmp+=sig;
+                            arena.grid_weights_obs[loc_w]+=sig;
+                        }
+
+                        printf("Weights updated! %i,%i :%f\n",loc_x_tmp,loc_y,arena.grid_weights_obs[loc_w]);
+
+
+#endif
                     }
                 }
             }
@@ -695,7 +716,7 @@ void obstacle_update(float gamma, int i){
         
     }
 }
-void plan_ahead(int i_loc, int j_loc, int head,float *q){
+void plan_aheadp1(int i_loc, int j_loc, int head,float *q){
 
 
     int i;
@@ -718,6 +739,38 @@ void plan_ahead(int i_loc, int j_loc, int head,float *q){
             }
 
     }
+    *q = min;
+}
+void plan_ahead(int i_loc, int j_loc, int head,float *q){
+
+
+    int i;
+    int i_tmp;
+    int j_tmp;
+    float min = INFINITY;
+    float q_ahead;
+    for(i=0;i<7;i++){
+        i_tmp = i_loc+arena.st_wp_i[i];
+        j_tmp = j_loc+arena.st_wp_j[i];
+        if(i_tmp>=0&&i_tmp<GRID_RES&&\
+           j_tmp>=0&&j_tmp<GRID_RES){
+#ifdef PLANAHEADP1 
+            plan_aheadp1(i_tmp,j_tmp,i,&q_ahead);
+            *q = arena.grid_weights_exp[i_tmp*GRID_RES+j_tmp]+arena.grid_weights_obs[i_tmp*GRID_RES+j_tmp]+arena.scores[8+i-head]+q_ahead;
+#else
+
+            *q = arena.grid_weights_exp[i_tmp*GRID_RES+j_tmp]+arena.grid_weights_obs[i_tmp*GRID_RES+j_tmp]+arena.scores[8+i-head];
+#endif
+        }
+        else{
+            *q = INFINITY;
+        }
+            if(*q<min){
+                min = *q;
+            }
+
+    }
+    *q = min;
 }
 
 void plan_action(int i_loc, int j_loc, int head,int *best,float *q){
@@ -728,15 +781,22 @@ void plan_action(int i_loc, int j_loc, int head,int *best,float *q){
     int j_tmp;
     /*float q[8] = {0,0,0,0,0,0,0,0};*/
     float min = INFINITY;
-    /*float q_ahead;*/
+#ifdef PLAN_AHEAD
+    float q_ahead;
+#endif
     for(i=0;i<7;i++){
         i_tmp = i_loc+arena.st_wp_i[i];
         j_tmp = j_loc+arena.st_wp_j[i];
         if(i_tmp>=0&&i_tmp<GRID_RES&&\
            j_tmp>=0&&j_tmp<GRID_RES){
-            /*plan_ahead(i_tmp,j_tmp,i,&q_ahead);*/
-            
+#ifdef PLAN_AHEAD
+            plan_ahead(i_tmp,j_tmp,i,&q_ahead);
+            *q = arena.grid_weights_exp[i_tmp*GRID_RES+j_tmp]+arena.grid_weights_obs[i_tmp*GRID_RES+j_tmp]+arena.scores[8+i-head]+q_ahead;
+#else
+
+            plan_ahead(i_tmp,j_tmp,i,&q_ahead);
             *q = arena.grid_weights_exp[i_tmp*GRID_RES+j_tmp]+arena.grid_weights_obs[i_tmp*GRID_RES+j_tmp]+arena.scores[8+i-head];
+#endif
             /*printf("action:%i -> score %f\n, min:%f,best@%i",i,*q,min,*best);*/
         }
         else{
@@ -752,7 +812,9 @@ void plan_action(int i_loc, int j_loc, int head,int *best,float *q){
 }
 
 /*void move(){}*/
-
+#ifdef WEIGHTS_NORMALIZED
+float total_weight = GRID_RES*GRID_RES*WEIGHT_BASE;
+#endif
 void arena_update(float v[],int n){
     /*printarr_float(v,OBS_SLOTS);*/
     /*printf("%i",n);*/
@@ -781,6 +843,21 @@ void arena_update(float v[],int n){
             for(i = 0;i<arena.n_drops;i++) obstacle_destroy(arena.drop[i]);
             for(i=0;i<arena.n_new;i++) obstacle_add(v[arena.new[i]]);
             for(i=0;i<arena.n_matches;i++) obstacle_update(v[arena.matches_d[i]],arena.matches_s[i]);
+#ifdef WEIGHTS_NORMALIZED
+            if (sig_tmp>0){
+                float norm_factor = total_weight/(total_weight+sig_tmp);
+
+
+                for(i=0;i<GRID_RES;i++){
+                    for(j=0;j<GRID_RES;j++){
+                        arena.grid_weights_obs[i*GRID_RES+j]*=norm_factor;
+                    }
+                }
+                sig_tmp = 0;
+            }
+#endif
+
+            
         }
     }
 
@@ -886,7 +963,7 @@ void init_map(void) {
 
     for(i=0;i<GRID_RES*GRID_RES;i++){
         arena.grid_weights_exp[i]=0;
-        arena.grid_weights_obs[i]=0;
+        arena.grid_weights_obs[i]=WEIGHT_BASE;
     }
 
     for(i=0;i<OBS_SLOTS;i++){
@@ -937,7 +1014,7 @@ void init_map(void) {
 
 
 
-#define PRINT_THIS_SHIT
+#define PRINT_THIS
 
 void nav_print_full_report(void)
 {
@@ -950,7 +1027,7 @@ void nav_print_full_report(void)
 
     printf("Status report:\n");
     printf("Angles coming in:\n");
-    printarr_float_angles(v,30);
+    printarr_float_angles(v,tmp);
 
 
 
@@ -958,9 +1035,10 @@ void nav_print_full_report(void)
 
 
 
-#ifndef PRINT_THIS_SHIT
+#ifdef PRINT_THIS
     int i;
     obstacle o;
+#ifdef AVOID_NAV_DEBUG
     nav_debug_downlink[0]=arena.obs[0].xy.x;
     nav_debug_downlink[1]=arena.obs[0].xy_n.x;
     nav_debug_downlink[2]=arena.obs[1].xy.x;
@@ -973,6 +1051,7 @@ void nav_print_full_report(void)
 
     nav_debug_downlink[8]=arena.obs[1].err;
     nav_debug_downlink[9]=arena.obs[1].err;
+#endif
     printf("Curr. position: (abs,grd,discrete) %.2f,%.2f %.2f,%.2f %i,%i\n",\
     veh.xy_abs.x,veh.xy_abs.y,veh.xy_g.x,veh.xy_g.y,veh.gridij[0],veh.gridij[1]);
     printf("Curr. wp. setting: (abs,grd) %.2f,%.2f,%.2f,%.2f\n",\
@@ -980,7 +1059,7 @@ void nav_print_full_report(void)
     float range = vec2d_dist(&veh.xy_abs,&veh.wp_abs);
     printf("Range to next waypoint: %f\n",range);
     printf("Obstacle parallax:\n");
-    printf("p0: %f p1: %f\n",arena.angles_d[0]*180/PI,arena.angles_d[1]*180/PI);
+    /*printf("p0: %f p1: %f\n",arena.angles_d[0]*180/PI,arena.angles_d[1]*180/PI);*/
     printf("Current field of view:\n");
     printarr_float(arena.angles_s,OBS_SLOTS);
     printf("Currently tracked obstacles:\n");
@@ -1002,22 +1081,43 @@ void nav_print_full_report(void)
 }
 
 
-#define NTEST 0
+void test_angles(void){
+    float vv[OBS_SLOTS];
+    int nn;
+    request_obstacles(vv,&nn);
+    if(nn>0){
+    printf("leftmost value: %f, rightmost value: %f\n",vv[1],vv[nn-1]);
+    }
+}
+/*#define NTEST */
+#ifdef NTEST
 int test_all;
 float angle1;
 float angle2;
+int testes_counter;
 
 vec2d xy_1;
 vec2d xy_2;
 
 int cccounter;
 void testing_routines(void){
+    float v;
+    int n;
+    request_obstacles(&v,&n);
+    if(n>1){
+        }
+    float vfirst = &v[1]
 
 switch(test_all)
     case 1:
-
+    for(testes_counter=0;testes_counter<500;testes_counter++){
     printf("Running angle checks\n");
     printf("Place drone in position 1\n");
+    request_obstacles(&v,&n);
+
+    if(n>1){
+        
+        printf("leftmost value: %f, rightmost value: %f\n",v[1],)
     /*do something*/
     break;
     
@@ -1039,11 +1139,8 @@ switch(test_all)
     case 5:
     printf("Running tracking checks\n");
     printf("Move the drone around...");
-
-
-
+    break;
 
 }
 
-
-
+#endif
