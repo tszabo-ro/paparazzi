@@ -92,11 +92,17 @@ extern int32_t guidance_h_igain;
 extern int32_t guidance_h_vgain;
 extern int32_t guidance_h_again;
 
+extern int32_t guidance_h_vPgain;
+extern int32_t guidance_h_vDgain;
+extern int32_t guidance_h_vIgain;
+extern int32_t guidance_h_velocity_feedback_dgain;
+
 extern int32_t transition_percentage;
 extern int32_t transition_theta_offset;
 
 extern bool_t behavior_tree_control;
-extern struct Int32Vect2 bt_speed_sp_i;
+//extern struct Int32Vect2 bt_speed_sp_i;
+extern struct FloatVect2 bt_speed_sp_f;
 
 extern void guidance_h_init(void);
 extern void guidance_h_mode_changed(uint8_t new_mode);

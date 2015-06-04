@@ -89,8 +89,8 @@ void RSSI2Dist_init(void)
   // Initialize RSSI EKF
   for (int i=0; i < RSSI_DIST_SENSOR_MAX_NUM_TRACKED; ++i)
   {
-    rssiDistEstimates[i] = 2;
-    rssiDistEstimatesP[i] = 1;
+    rssiDistEstimates[i] = 5;
+    rssiDistEstimatesP[i] = 10;
     int_max_value_filter_init(&rssiInputFilter[i],10);
   }
   
@@ -250,7 +250,7 @@ void RSSI2Dist_periodic(void)
   printf("Stepping filters: \n");
   for (int i=0; i < RSSI_DIST_SENSOR_MAX_NUM_TRACKED; ++i)
   {
-    printf("blip!\n");
+//    printf("blip!\n");
     rssiFilt = (float)int_max_value_filter_step((int8_max_value_filter*)&rssiInputFilter, rssi[i]);
     if (rssiFilt > -60)
       rssiFilt = -60;
@@ -262,10 +262,7 @@ void RSSI2Dist_periodic(void)
     float P_kp1_k = rssiDistEstimatesP[i] + RSSI_DIST_Q;
     float Ve      = Hx*P_kp1_k*Hx + RSSI_DIST_R;
     float K       = P_kp1_k*Hx/Ve;
-    
-//    if (i == 0)
-//      KGain = K;
-    
+        
     rssiDistEstimates[i] += K*(rssiFilt - h_kp1_k);
     rssiDistEstimatesP[i] = (1-K*Hx)*P_kp1_k*(1-K*Hx) + K*RSSI_DIST_R*K;
   }

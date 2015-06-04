@@ -25,7 +25,9 @@
 #ifndef BTCONTROLLER_H
 #define BTCONTROLLER_H
 
-#define     DRONE_MAX_VCMD          0.3f
+#include "../../filters/low_pass_filter.h"
+
+#define     DRONE_MAX_VCMD          0.6f
 #define     DRONE_MAX_PSIDOT        (40*(M_PI/180))
 
 #define     BTCONTROLLER_DT         0.05f
@@ -33,17 +35,17 @@
 
 #define     WALL_THREASHOLD         <
 
-#define     AREALIM_P0_X           -4.25f
-#define     AREALIM_P0_Y           -1.02f
+#define     AREALIM_P0_X           -4.29f
+#define     AREALIM_P0_Y           -0.91f
 
-#define     AREALIM_P1_X            0.61f
-#define     AREALIM_P1_Y           -3.79f
+#define     AREALIM_P1_X            0.22f
+#define     AREALIM_P1_Y           -4.36f
 
-#define     AREALIM_P2_X            3.65f
-#define     AREALIM_P2_Y            1.16f
+#define     AREALIM_P2_X            3.56f
+#define     AREALIM_P2_Y            0.99f
 
-#define     AREALIM_P3_X           -1.18f
-#define     AREALIM_P3_Y            3.97f
+#define     AREALIM_P3_X           -0.83f
+#define     AREALIM_P3_Y            4.55f
 
 #define     AL_N0_Y                 (AREALIM_P0_X-AREALIM_P1_X)
 #define     AL_N0_X                 (AREALIM_P1_Y-AREALIM_P0_Y)
@@ -62,11 +64,14 @@ float psiCmd;
 float psiDotCmd;
 float speedCmd;
 
-float dummy1;
-float dummy2;
-float dummy3;
+float btIO_0;
+float btIO_1;
+float btIO_2;
+float btIO_3;
 
 int   currentBounceWall;
+
+//Butterworth4LowPass inputFilter
 
 extern void   initBTCtrl(void);
 extern void   periodicBTCtrl(void);

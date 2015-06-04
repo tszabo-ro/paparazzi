@@ -31,11 +31,11 @@
 #include "math.h"
 
 #define BTWORKSPACE_NUM_INS 1
-#define BTWORKSPACE_NUM_PAR 0
-#define BTWORKSPACE_NUM_OUT 2
-#define BT_MAX_NUM_NODES    5
+#define BTWORKSPACE_NUM_PAR 1
+#define BTWORKSPACE_NUM_OUT 3
+#define BT_MAX_NUM_NODES    10
 
-typedef enum {tBTSelect, tBTSequence, tBTConditionC, tBTConditionP, tBTSet, tBTSetProportional, tBTEmpty} BTNodeType;
+typedef enum {tBTSelect, tBTSequence, tBTConditionC, tBTConditionP, tBTSetC, tBTSetProportional, tBTEmpty} BTNodeType;
 
 typedef struct BehaviorTreeStrtuct
 {
@@ -66,12 +66,12 @@ typedef struct BTConditionPStruct
   uint8_t     compareTo;
   bool        compareTypeMoreThan;
 } BTConditionP;
-typedef struct BTSetStruct
+typedef struct BTSetCStruct
 {
   uint8_t     wpDataIndex;
   float       value;
   bool        setTypeAbsolute;
-} BTSet;
+} BTSetC;
 
 typedef struct BTSetProportionalStruct
 {

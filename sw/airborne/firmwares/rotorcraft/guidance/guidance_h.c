@@ -29,6 +29,7 @@
 #include "firmwares/rotorcraft/guidance/guidance_h.h"
 #include "firmwares/rotorcraft/stabilization.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
+#include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
 #include "firmwares/rotorcraft/navigation.h"
 #include "subsystems/radio_control.h"
 
@@ -36,6 +37,8 @@
 #include "firmwares/rotorcraft/guidance/guidance_v.h"
 
 #include "state.h"
+
+#include <stdio.h>
 
 #ifndef GUIDANCE_H_AGAIN
 #define GUIDANCE_H_AGAIN 0
@@ -76,10 +79,11 @@ struct Int32Vect2 guidance_h_speed_ref;
 struct Int32Vect2 guidance_h_accel_ref;
 #if GUIDANCE_H_USE_SPEED_REF
 struct Int32Vect2 guidance_h_speed_sp;
-struct Int32Vect2 bt_speed_sp_i;
+struct FloatVect2 bt_speed_sp_f;
 #endif
 struct Int32Vect2 guidance_h_pos_err;
 struct Int32Vect2 guidance_h_speed_err;
+struct Int32Vect2 guidance_h_accel_err;
 struct Int32Vect2 guidance_h_trim_att_integrator;
 
 struct Int32Vect2  guidance_h_cmd_earth;
@@ -92,13 +96,26 @@ int32_t guidance_h_igain;
 int32_t guidance_h_again;
 int32_t guidance_h_vgain;
 
+int32_t guidance_h_vPgain;
+int32_t guidance_h_vIgain;
+int32_t guidance_h_vDgain;
+int32_t guidance_h_velocity_feedback_dgain;
+
 int32_t transition_percentage;
 int32_t transition_theta_offset;
 
 bool_t behavior_tree_control;
 
+float  vX_last;
+float  vY_last;
+float  vX_err_last;
+float  vY_err_last;
+double vX_err_integral;
+double vY_err_integral;
+
 static void guidance_h_update_reference(void);
 static void guidance_h_traj_run(bool_t in_flight);
+static void guidance_h_traj_run_speed(bool_t in_flight);
 static void guidance_h_hover_enter(void);
 static void guidance_h_nav_enter(void);
 static inline void transition_run(void);
@@ -177,6 +194,20 @@ void guidance_h_init(void) {
   guidance_h_dgain = GUIDANCE_H_DGAIN;
   guidance_h_again = GUIDANCE_H_AGAIN;
   guidance_h_vgain = GUIDANCE_H_VGAIN;
+
+  guidance_h_vPgain = GUIDANCE_H_V_PGAIN;
+  guidance_h_vIgain = GUIDANCE_H_V_IGAIN;
+  guidance_h_vDgain = GUIDANCE_H_V_DGAIN;
+
+  guidance_h_velocity_feedback_dgain = GUIDANCE_H_V_FB_DGAIN;
+
+  vX_last         = 0;
+  vY_last         = 0;
+  vX_err_last     = 0;
+  vY_err_last     = 0;
+  vX_err_integral = 0;
+  vY_err_integral = 0;
+
   transition_percentage = 0;
   transition_theta_offset = 0;
   behavior_tree_control = false;
@@ -358,18 +389,38 @@ void guidance_h_run(bool_t  in_flight) {
         stabilization_attitude_set_rpy_setpoint_i(&sp_cmd_i);
       }
       else {
-        INT32_VECT2_NED_OF_ENU(guidance_h_pos_sp, navigation_carrot);
+         INT32_VECT2_NED_OF_ENU(guidance_h_pos_sp, navigation_carrot);
 
-        guidance_h_update_reference();
+         /* set psi command */
+         guidance_h_heading_sp = nav_heading;
+         INT32_ANGLE_NORMALIZE(guidance_h_heading_sp);
+         /* compute x,y earth commands */
+         if (behavior_tree_control)
+         {
+            // Set the reference to the current position
+            struct Int32Vect2 zeroVec2;
+            struct Int32Vect2 cPos;
+            zeroVec2.x = 0;
+            zeroVec2.y = 0;
+            cPos.x = stateGetPositionNed_i()->x;
+            cPos.y = stateGetPositionNed_i()->y;
+            gh_set_ref(cPos, zeroVec2, zeroVec2);
 
-        /* set psi command */
-        guidance_h_heading_sp = nav_heading;
-        INT32_ANGLE_NORMALIZE(guidance_h_heading_sp);
-        /* compute x,y earth commands */
-        guidance_h_traj_run(in_flight);
-        /* set final attitude setpoint */
-        stabilization_attitude_set_earth_cmd_i(&guidance_h_cmd_earth,
-                                               guidance_h_heading_sp);
+            // Set the pitch & roll references
+            guidance_h_traj_run_speed(in_flight); // < does NOT set guidance_h_cmd_earth, but the pitch & roll setpoints directly in quat
+         }
+         else
+         {
+            // Clear the speed integrators
+            vX_err_integral = 0;
+            vY_err_integral = 0;
+
+            guidance_h_update_reference();
+            guidance_h_traj_run(in_flight); 
+            /* set final attitude setpoint */
+            stabilization_attitude_set_earth_cmd_i(&guidance_h_cmd_earth,
+                                                     guidance_h_heading_sp);
+         }
       }
       stabilization_attitude_run(in_flight);
       break;
@@ -386,8 +437,8 @@ static void guidance_h_update_reference(void) {
 #if GUIDANCE_H_USE_SPEED_REF
   if(guidance_h_mode == GUIDANCE_H_MODE_HOVER)
     gh_update_ref_from_speed_sp(guidance_h_speed_sp);
-  else if(guidance_h_mode == GUIDANCE_H_MODE_NAV && behavior_tree_control)
-    gh_update_ref_from_speed_sp(bt_speed_sp_i);
+//  else if(guidance_h_mode == GUIDANCE_H_MODE_NAV && behavior_tree_control)
+//    gh_update_ref_from_speed_sp(bt_speed_sp_i);
   else
 #endif
   gh_update_ref_from_pos_sp(guidance_h_pos_sp);
@@ -415,6 +466,7 @@ static void guidance_h_update_reference(void) {
 
 #define MAX_POS_ERR   POS_BFP_OF_REAL(16.)
 #define MAX_SPEED_ERR SPEED_BFP_OF_REAL(16.)
+#define MAX_ACCEL_ERR ACCEL_BFP_OF_REAL(8.)
 
 #ifndef GUIDANCE_H_THRUST_CMD_FILTER
 #define GUIDANCE_H_THRUST_CMD_FILTER 10
@@ -423,6 +475,76 @@ static void guidance_h_update_reference(void) {
 /* with a pgain of 100 and a scale of 2,
  * you get an angle of 5.6 degrees for 1m pos error */
 #define GH_GAIN_SCALE 2
+static void guidance_h_traj_run_speed(bool_t in_flight) 
+{
+  /* maximum bank angle: default 20 deg, max 40 deg*/
+  static const int32_t traj_max_bank = Max(BFP_OF_REAL(GUIDANCE_H_MAX_BANK, INT32_ANGLE_FRAC),
+                                           BFP_OF_REAL(RadOfDeg(GUIDANCE_H_MAX_BANK), INT32_ANGLE_FRAC));
+  static const int32_t total_max_bank = BFP_OF_REAL(RadOfDeg(45), INT32_ANGLE_FRAC);
+
+
+   float vRefX = bt_speed_sp_f.x;
+   float vRefY = bt_speed_sp_f.y;
+
+   // Velocity derivative
+   float vXDeriv = stateGetSpeedNed_f()->x - vX_last;
+   float vYDeriv = stateGetSpeedNed_f()->x - vY_last;
+
+   vX_last = stateGetSpeedNed_f()->x;
+   vY_last = stateGetSpeedNed_f()->y;
+
+   // Add damping to the commanded velocity
+   vRefX += (((double)guidance_h_velocity_feedback_dgain)/100)*vXDeriv;
+   vRefY += (((double)guidance_h_velocity_feedback_dgain)/100)*vYDeriv;
+
+   // Velocity error - FLOAT
+   float vX_err = vRefX - stateGetSpeedNed_f()->x;
+   float vY_err = vRefY - stateGetSpeedNed_f()->y;
+
+   // Derivative of the velocity error - FLOAT (NEEDS TIME SCALING)
+   float vX_err_dot = vX_err - vX_err_last;
+   float vY_err_dot = vY_err - vY_err_last;
+
+   // Integral of the velocity error
+   vX_err_integral += vX_err;
+   vY_err_integral += vY_err;
+
+   vX_err_last = vX_err;
+   vY_err_last = vY_err;
+
+
+   float pd_x = vX_err*(((double)guidance_h_vPgain)/100.0f) +
+                vX_err_integral*(((double)guidance_h_vIgain)/100000.0f) + 
+                vX_err_dot*(((double)guidance_h_vDgain)/100.0f);
+
+   float pd_y = vY_err*(((double)guidance_h_vPgain)/100.0f) +
+                vY_err_integral*(((double)guidance_h_vIgain)/100000.0f)+
+                vY_err_dot*(((double)guidance_h_vDgain)/100.0f);
+
+   printf("AttCtrl: xE: %.2f yE: %.2f pd_x: %.4f pd_y: %.4f\n", vX_err, vY_err, pd_x, pd_y);
+
+   struct Int32Vect2  attitudeSetpoint;
+   attitudeSetpoint.x = ANGLE_BFP_OF_REAL(pd_x);
+   attitudeSetpoint.y = ANGLE_BFP_OF_REAL(pd_y);
+
+  /* trim max bank angle from PD */
+   VECT2_STRIM(attitudeSetpoint, -traj_max_bank, traj_max_bank);
+   INT_VECT2_ZERO(guidance_h_trim_att_integrator);
+
+   quat_from_earth_cmd_i(&stab_att_sp_quat, &attitudeSetpoint, guidance_h_heading_sp);
+
+
+  /* compute a better approximation of force commands by taking thrust into account */
+/*
+  if (guidance_h_approx_force_by_thrust && in_flight) {
+    static int32_t thrust_cmd_filt;
+    int32_t vertical_thrust = (stabilization_cmd[COMMAND_THRUST] * guidance_v_thrust_coeff) >> INT32_TRIG_FRAC;
+    thrust_cmd_filt = (thrust_cmd_filt * GUIDANCE_H_THRUST_CMD_FILTER + vertical_thrust) / (GUIDANCE_H_THRUST_CMD_FILTER + 1);
+    guidance_h_cmd_earth.x = ANGLE_BFP_OF_REAL(atan2f((guidance_h_cmd_earth.x * MAX_PPRZ / INT32_ANGLE_PI_2), thrust_cmd_filt));
+    guidance_h_cmd_earth.y = ANGLE_BFP_OF_REAL(atan2f((guidance_h_cmd_earth.y * MAX_PPRZ / INT32_ANGLE_PI_2), thrust_cmd_filt));
+  }
+   */
+}
 
 static void guidance_h_traj_run(bool_t in_flight) {
   /* maximum bank angle: default 20 deg, max 40 deg*/

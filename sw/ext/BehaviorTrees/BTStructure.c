@@ -93,9 +93,9 @@ bool tickNode(void *node, BTNodeType nodeType, BTWorkspace *workspace)
             return true;
         }
       }
-      case tBTSet:
+      case tBTSetC:
       {
-        BTSet *thisNode = (BTSet*)node;
+        BTSetC *thisNode = (BTSetC*)node;
         if (thisNode->setTypeAbsolute)
           workspace->wpData[BTWORKSPACE_NUM_INS + thisNode->wpDataIndex] = thisNode->value;
         else

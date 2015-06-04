@@ -5,7 +5,7 @@
   <firmware name="rotorcraft">
     <target name="ap" board="ardrone2_raw">
       <configure name="HOST" value="192.168.209.235"/>
-      <define name="LINK_HOST" value="\\\"192.168.209.14\\\""/>
+      <define name="LINK_HOST" value="\\\"192.168.209.20\\\""/>
 <!--      <configure name="HOST" value="192.168.0.235"/>
       <define name="LINK_HOST" value="\\\"192.168.0.101\\\""/>-->
       <define name="AUTOPILOT_DISABLE_AHRS_KILL"/>
@@ -164,9 +164,9 @@
     <define name="REF_MAX_Q" value="600." unit="deg/s"/>
     <define name="REF_MAX_QDOT" value="RadOfDeg(8000.)"/>
 
-    <define name="REF_OMEGA_R" value="300" unit="deg/s"/>
+    <define name="REF_OMEGA_R" value="150" unit="deg/s"/>
     <define name="REF_ZETA_R" value="0.9"/>
-    <define name="REF_MAX_R" value="400." unit="deg/s"/>
+    <define name="REF_MAX_R" value="100." unit="deg/s"/>
     <define name="REF_MAX_RDOT" value="RadOfDeg(4000.)"/>
 
     <!-- feedback -->

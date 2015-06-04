@@ -187,7 +187,7 @@ static void send_bluegps(void)
   int32_t D1 = rssiDistEstimates[1]*1000;
   int8_t wallIndex = (int8_t)currentBounceWall;
   
-  float T = psiCmd*(180/M_PI);
+  float psiCmdDeg = psiCmd*(180/M_PI);
   
   DOWNLINK_SEND_BLUEGPS(DefaultChannel, DefaultDevice,
                               &(stateGetPositionNed_i()->x),
@@ -198,16 +198,17 @@ static void send_bluegps(void)
                               &(stateGetSpeedNed_i()->z),
                               &(stateGetNedToBodyEulers_i()->psi),
                               &(rssi[0]),
-                              &(D0),
                               &(rssi[1]),
+                              &(D0),
                               &(D1),
                               &(speedCmd),
                               &(psiDotCmd),
-                              &(T),
+                              &(psiCmdDeg),
                               &(wallIndex),
-                              &(dummy1),
-                              &(dummy2),
-                              &(dummy3)
+                              &(btIO_0),
+                              &(btIO_1),
+                              &(btIO_2),
+                              &(btIO_3)
                               );
 }
 

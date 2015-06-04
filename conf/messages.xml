@@ -1943,17 +1943,19 @@
     <field name="vdown"     type="int32" alt_unit="m/s" alt_unit_coef="0.0000019"/>
     <field name="psi"       type="int32" alt_unit="deg" alt_unit_coef="0.0139882"/>
     <field name="rssi0"     type="int8"/>
-    <field name="dEst0"     type="int32" alt_unit="m" alt_unit_coef="0.001"/>
     <field name="rssi1"     type="int8"/>
+    <field name="dEst0"     type="int32" alt_unit="m" alt_unit_coef="0.001"/>
     <field name="dEst1"     type="int32" alt_unit="m" alt_unit_coef="0.001"/>
     <field name="speedCmd"  type="float"/>
     <field name="psiDotCmd" type="float"/>
-    <field name="psiCmd"    type="float"/>
+    <field name="psiCmdDeg"    type="float"/>
     <field name="wallIndex" type="int8"/>
-    <field name="dummy1"    type="float"/>
-    <field name="dummy2"    type="float"/>
-    <field name="dummy3"    type="float"/>
+    <field name="btIO_0"    type="float"/>
+    <field name="btIO_1"    type="float"/>
+    <field name="btIO_2"    type="float"/>
+    <field name="btIO_3"    type="float"/>
   </message>
+
 
  <!--217 is free -->
  <!--218 is free -->

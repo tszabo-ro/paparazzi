@@ -15,6 +15,9 @@ BTWorkspace  theBehaviorTreeWorkspace;
 
 int lastBounceWall;
 
+uint8_t speedFlip;
+uint16_t flipCount;
+uint16_t flipCycle;
 void initBTCtrl(void)
 {
   // Initialize psiCmd as the current heading
@@ -26,7 +29,12 @@ void initBTCtrl(void)
   PCurrent[0] = POS_FLOAT_OF_BFP(currentPos->x);
   PCurrent[1] = POS_FLOAT_OF_BFP(currentPos->y);*/
   currentBounceWall = -1;//inArena(-1, (float*)&PCurrent);
-  
+
+  speedFlip = 1;  
+  speedCmd  = 1;
+  flipCycle = 1;
+  flipCount = 0;
+
   // Initialize the BT
   initBT(&theBehaviorTree);
 }
@@ -38,16 +46,16 @@ void periodicBTCtrl(void)
 {
   if (psiCmd == 100)
   {
-    psiCmd = ANGLE_FLOAT_OF_BFP(nav_heading);
+    psiCmd = 0;//ANGLE_FLOAT_OF_BFP(nav_heading);
     FLOAT_ANGLE_NORMALIZE(psiCmd);
+    speedCmd = DRONE_MAX_VCMD;
   }
 
+  // Set PCurrent to the current ENU coordinates!
   float PCurrent[2];
   struct NedCoor_f *currentPos = stateGetPositionNed_f();
   PCurrent[0] = currentPos->x;
   PCurrent[1] = currentPos->y;
-  
-  // Set PCurrent to the current ENU coordinates!
 
   //Check if we are still in the arena
   currentBounceWall = inArena(lastBounceWall, (float*)&PCurrent);
@@ -64,7 +72,18 @@ void periodicBTCtrl(void)
     }
     
     // Set the BT inputs
-    theBehaviorTreeWorkspace.wpData[0] = closestDistance/5;   // Scaling required by BT
+    theBehaviorTreeWorkspace.wpData[0] = closestDistance/2.5-1;   // Scaling required by BT
+/*    if distance < .2m
+   {  
+      guidance_h_pgain=PSI_PGAIN*2
+-- define name="MAX_BANK" value="50" unit="deg"/ -->
+   }    
+ else
+{ 	guidance_h_pgain=PSI_PGAIN
+-- define name="MAX_BANK" value="20
+}*/
+
+
     if (theBehaviorTreeWorkspace.wpData[0] > 1)
       theBehaviorTreeWorkspace.wpData[0] = 1;
     
@@ -73,28 +92,56 @@ void periodicBTCtrl(void)
     tickBT(&theBehaviorTree, &theBehaviorTreeWorkspace);
     
     // Get BT outputs
-    speedCmd            = theBehaviorTreeWorkspace.wpData[BTWORKSPACE_NUM_INS + 0];
-    psiDotCmd           = theBehaviorTreeWorkspace.wpData[BTWORKSPACE_NUM_INS + 1];
+    //speedCmd            = 0;//theBehaviorTreeWorkspace.wpData[BTWORKSPACE_NUM_INS + 0];
+    psiDotCmd           = 0;//theBehaviorTreeWorkspace.wpData[BTWORKSPACE_NUM_INS + 1];
+    float headingInc    = 0;//theBehaviorTreeWorkspace.wpData[BTWORKSPACE_NUM_INS + 2];
 
-    dummy1 = theBehaviorTreeWorkspace.wpData[0];
-    dummy2 = theBehaviorTreeWorkspace.wpData[1];
-    dummy3 = theBehaviorTreeWorkspace.wpData[2];
+ /*   float vX = stateGetSpeedNed_f()->x;
+    float vY = stateGetSpeedNed_f()->y;
+    float vZ = stateGetSpeedNed_f()->z;
+    float measV = sqrt(vX*vX + vY*vY + vZ*vZ);
+    if ( (measV > DRONE_MAX_VCMD*0.9) && (speedFlip == 1) )
+    {   
+      speedCmd = (-1)*speedCmd;
+      speedFlip = 0;
+    }
+    if (measV < DRONE_MAX_VCMD/2)
+      speedFlip = 1;*/
+
+   if (++speedFlip > 60*(5-flipCycle))
+   {
+      speedCmd = (-1)*speedCmd;
+      speedFlip = 0;
+      if (++flipCount >= 10)
+      {
+         flipCount = 0;
+         ++flipCycle;
+      }
+   }
+   else
+      ++speedFlip;
+
+   if (flipCycle > 4)
+      speedCmd = 0;
+
+    btIO_0 = theBehaviorTreeWorkspace.wpData[0];
+    btIO_1 = theBehaviorTreeWorkspace.wpData[1];
+    btIO_2 = theBehaviorTreeWorkspace.wpData[2];
+    btIO_3 = theBehaviorTreeWorkspace.wpData[3];
     
     if (speedCmd > 1)
       speedCmd = 1;
     if (speedCmd < -1)
       speedCmd = -1;
-      
-    speedCmd = speedCmd*DRONE_MAX_VCMD;
     
     if (psiDotCmd > 1)
       psiDotCmd = 1;
     if (psiDotCmd < -1)
       psiDotCmd = -1;
       
-    psiDotCmd = (-1)*psiDotCmd*DRONE_MAX_PSIDOT;
+    psiDotCmd = psiDotCmd*DRONE_MAX_PSIDOT;
     
-    psiCmd += (psiDotCmd*BTCONTROLLER_DT);
+    psiCmd += (psiDotCmd*BTCONTROLLER_DT) + headingInc;
     
     while (psiCmd > M_PI)
       psiCmd -= 2*M_PI;
@@ -106,9 +153,18 @@ void periodicBTCtrl(void)
   else
   {
     if (lastBounceWall != currentBounceWall)
-      psiCmd = calculateBounceHeading(currentBounceWall, PCurrent, psiCmd);
-
-    speedCmd          = 0.1f;
+    {
+      if (speedCmd < 0)
+      {
+         psiCmd = calculateBounceHeading(currentBounceWall, PCurrent, psiCmd + M_PI) + M_PI;
+//         speedCmd          = -0.1f;
+      }
+      else
+      {
+         psiCmd = calculateBounceHeading(currentBounceWall, PCurrent, psiCmd);
+//         speedCmd          = 0.1f;
+      }
+    }
   }
   
 /*  if (psiCmd > M_PI)
@@ -126,64 +182,48 @@ void periodicBTCtrl(void)
       
     nav_heading = ANGLE_BFP_OF_REAL(hSP);
     
-    float vCmdX = cos(psiCmd)*speedCmd;
-    float vCmdY = sin(psiCmd)*speedCmd;
-    
+//    float vCmdX = cos(psiCmd)*speedCmd*DRONE_MAX_VCMD;
+//    float vCmdY = sin(psiCmd)*speedCmd*DRONE_MAX_VCMD;
+
+    float vCmdX = speedCmd;//*DRONE_MAX_VCMD;
+    float vCmdY = 0;
+
+//    float vCmdX = speedCmd*DRONE_MAX_VCMD;
+//    float vCmdY = 0;
       
-    bt_speed_sp_i.x  = SPEED_BFP_OF_REAL(vCmdX);
-    bt_speed_sp_i.y  = SPEED_BFP_OF_REAL(vCmdY);
+    bt_speed_sp_f.x  = vCmdX;//SPEED_BFP_OF_REAL(vCmdX);
+    bt_speed_sp_f.y  = vCmdY;//SPEED_BFP_OF_REAL(vCmdY);
   }
   else
   {
     psiCmd = 100;
-    bt_speed_sp_i.x  = 0;//SPEED_BFP_OF_REAL(vCmdX);
-    bt_speed_sp_i.y  = 0;//SPEED_BFP_OF_REAL(vCmdY);
+    bt_speed_sp_f.x  = 0;
+    bt_speed_sp_f.y  = 0;
   }
   
   lastBounceWall = currentBounceWall;
 }
 float calculateBounceHeading(int segmentIndex, float *P, float angle)
-{
-//  float impactPoint[2];
-//  float ts;
-//  float P0[2];
-//  float P1[2];
-  
+{ 
   struct FloatVect2 N;
   
   if (segmentIndex == 0)
   {
-//    P0[0]   = AREALIM_P0_X;
-//    P0[1]   = AREALIM_P0_Y;    
-//    P1[0]   = AREALIM_P1_X;
-//    P1[1]   = AREALIM_P1_Y;
     N.x     = AL_N0_X;
     N.y     = AL_N0_Y;    
   }
   else if (segmentIndex == 1)
   {
-//    P0[0]   = AREALIM_P1_X;
-//    P0[1]   = AREALIM_P1_Y;    
-//    P1[0]   = AREALIM_P2_X;
-//    P1[1]   = AREALIM_P2_Y;
     N.x     = AL_N1_X;
     N.y     = AL_N1_Y;
   }
   else if (segmentIndex == 2)
   {
-//    P0[0]   = AREALIM_P2_X;
-//    P0[1]   = AREALIM_P2_Y;    
-//    P1[0]   = AREALIM_P3_X;
-//    P1[1]   = AREALIM_P3_Y;
     N.x     = AL_N2_X;
     N.y     = AL_N2_Y;
   }
   else if (segmentIndex == 3)
   {
-//    P0[0]   = AREALIM_P3_X;
-//    P0[1]   = AREALIM_P3_Y;    
-//    P1[0]   = AREALIM_P0_X;
-//    P1[1]   = AREALIM_P0_Y;
     N.x     = AL_N3_X;
     N.y     = AL_N3_Y;
   }
