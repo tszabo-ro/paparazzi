@@ -208,7 +208,9 @@ static void send_bluegps(void)
                               &(btIO_0),
                               &(btIO_1),
                               &(btIO_2),
-                              &(btIO_3)
+                              &(btIO_3),
+                              &(prefiltRSSI[0]),
+                              &(prefiltRSSI[1])
                               );
 }
 

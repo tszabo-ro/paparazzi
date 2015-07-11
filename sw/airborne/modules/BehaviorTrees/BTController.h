@@ -26,26 +26,46 @@
 #define BTCONTROLLER_H
 
 #include "../../filters/low_pass_filter.h"
+#include "../../math/pprz_algebra_float.h"
 
-#define     DRONE_MAX_VCMD          0.6f
+#define     DRONE_MAX_VCMD          0.4f
 #define     DRONE_MAX_PSIDOT        (40*(M_PI/180))
 
 #define     BTCONTROLLER_DT         0.05f
 #define     GEOMETRY_SMALL_NUMBER   0.00000001f
 
-#define     WALL_THREASHOLD         <
 
-#define     AREALIM_P0_X           -4.29f
-#define     AREALIM_P0_Y           -0.91f
+// The walls are defined as P0->P1->P2->P3->P0 clockwise when looking at the arena from above. If the ordering is reversed, change WALL_THRESHOLD_OPERATOR to >
+#define     WALL_THRESHOLD_OPERATOR   < 
+#define     WALL_THRESHOLD          1
+#define     WALL_CAUTION_THRESHOLD  2
 
-#define     AREALIM_P1_X            0.22f
-#define     AREALIM_P1_Y           -4.36f
+// Bounce frequency limiter defined in number of cycles
+#define     MIN_WALL_BOUNCE_TIME    10
 
-#define     AREALIM_P2_X            3.56f
-#define     AREALIM_P2_Y            0.99f
+#define     AREALIM_P0_X           -4.34f
+#define     AREALIM_P0_Y           -0.87f
 
-#define     AREALIM_P3_X           -0.83f
-#define     AREALIM_P3_Y            4.55f
+#define     AREALIM_P1_X            0.90f
+#define     AREALIM_P1_Y           -4.29f
+
+#define     AREALIM_P2_X            4.20f
+#define     AREALIM_P2_Y            0.92f
+
+#define     AREALIM_P3_X           -0.80f
+#define     AREALIM_P3_Y            4.43f
+
+//#define     AREALIM_P0_X           -3.91f
+//#define     AREALIM_P0_Y           -0.78f
+
+//#define     AREALIM_P1_X            0.81f
+//#define     AREALIM_P1_Y           -3.86f
+
+//#define     AREALIM_P2_X            3.78f
+//#define     AREALIM_P2_Y            0.82f
+
+//#define     AREALIM_P3_X           -0.72f
+//#define     AREALIM_P3_Y            3.98f
 
 #define     AL_N0_Y                 (AREALIM_P0_X-AREALIM_P1_X)
 #define     AL_N0_X                 (AREALIM_P1_Y-AREALIM_P0_Y)
@@ -63,6 +83,7 @@
 float psiCmd;
 float psiDotCmd;
 float speedCmd;
+float speedScale;
 
 float btIO_0;
 float btIO_1;
@@ -71,12 +92,9 @@ float btIO_3;
 
 int   currentBounceWall;
 
-//Butterworth4LowPass inputFilter
-
 extern void   initBTCtrl(void);
 extern void   periodicBTCtrl(void);
 
-extern int    inArena(int preCheck, float *P);
-extern float  calculateBounceHeading(int segmentIndex, float *P, float angle);
+extern int    inArena(int preCheck, float *P, float *heading, float *bounce);
 extern float  intersect2(float *P0, float *P1, float *P, float angle, float *Ps, float  *ts);
 #endif

@@ -1954,6 +1954,8 @@
     <field name="btIO_1"    type="float"/>
     <field name="btIO_2"    type="float"/>
     <field name="btIO_3"    type="float"/>
+    <field name="rssi0pf"   type="int8"/>
+    <field name="rssi1pf"   type="int8"/>
   </message>
 
 

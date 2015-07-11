@@ -46,6 +46,7 @@ int8_max_value_filter       rssiInputFilter[RSSI_DIST_SENSOR_MAX_NUM_TRACKED];
 //float_moving_average_filter rssiDistDiffFilter[RSSI_DIST_SENSOR_MAX_NUM_TRACKED];
 
 signed char rssi[8];
+signed char prefiltRSSI[8];
 char k_rssi = 0;
 
 int sock, bytes_recv, sin_size;
@@ -91,7 +92,7 @@ void RSSI2Dist_init(void)
   {
     rssiDistEstimates[i] = 5;
     rssiDistEstimatesP[i] = 10;
-    int_max_value_filter_init(&rssiInputFilter[i],10);
+    int_max_value_filter_init(&rssiInputFilter[i],5);
   }
   
   
@@ -250,10 +251,7 @@ void RSSI2Dist_periodic(void)
   printf("Stepping filters: \n");
   for (int i=0; i < RSSI_DIST_SENSOR_MAX_NUM_TRACKED; ++i)
   {
-//    printf("blip!\n");
-    rssiFilt = (float)int_max_value_filter_step((int8_max_value_filter*)&rssiInputFilter, rssi[i]);
-    if (rssiFilt > -60)
-      rssiFilt = -60;
+    prefiltRSSI[i] = (float)int_max_value_filter_step((int8_max_value_filter*)&rssiInputFilter[i], rssi[i]);
     
     // BEGIN: RSSI-Distance model based EKF for estimating the relative distance & velocity
     float h_kp1_k = RSSI_FSL_A - 10*RSSI_FSL_n*log10(rssiDistEstimates[i]); // h_kp1_k = A - 10n*log10(dist)
@@ -263,7 +261,7 @@ void RSSI2Dist_periodic(void)
     float Ve      = Hx*P_kp1_k*Hx + RSSI_DIST_R;
     float K       = P_kp1_k*Hx/Ve;
         
-    rssiDistEstimates[i] += K*(rssiFilt - h_kp1_k);
+    rssiDistEstimates[i] += K*(prefiltRSSI[i] - h_kp1_k);
     rssiDistEstimatesP[i] = (1-K*Hx)*P_kp1_k*(1-K*Hx) + K*RSSI_DIST_R*K;
   }
 }

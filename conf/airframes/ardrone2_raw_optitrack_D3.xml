@@ -5,7 +5,7 @@
   <firmware name="rotorcraft">
     <target name="ap" board="ardrone2_raw">
       <configure name="HOST" value="192.168.209.236"/>
-      <define name="LINK_HOST" value="\\\"192.168.209.14\\\""/>
+      <define name="LINK_HOST" value="\\\"192.168.209.24\\\""/>
 <!--      <configure name="HOST" value="192.168.0.236"/>
       <define name="LINK_HOST" value="\\\"192.168.0.101\\\""/>-->
       <define name="AUTOPILOT_DISABLE_AHRS_KILL"/>
@@ -198,7 +198,7 @@
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
     <!-- Good weather -->
-    <define name="MAX_BANK" value="20" unit="deg"/>
+    <define name="MAX_BANK" value="25" unit="deg"/>
     <!-- Bad weather -->
     <!-- define name="MAX_BANK" value="32" unit="deg"/ -->
 
@@ -210,13 +210,18 @@
     <define name="USE_SPEED_REF" value="TRUE"/> <!-- Necessary for BT speed control -->
 
     <!-- gains -->
-    <define name="PGAIN" value="116"/>
-    <define name="DGAIN" value="60"/>
-    <define name="IGAIN" value="30"/>
+    <define name="PGAIN" value="165"/>
+    <define name="DGAIN" value="75"/>
+    <define name="IGAIN" value="0"/>
     <define name="VGAIN" value="0"/>
     <define name="AGAIN" value="0"/>
-  </section>
 
+    <define name="V_PGAIN" value="20"/>
+    <define name="V_DGAIN" value="220"/>
+    <define name="V_IGAIN" value="30"/>
+
+    <define name="V_FB_DGAIN" value="0"/>
+  </section>
   <section name="SIMULATOR" prefix="NPS_">
     <define name="ACTUATOR_NAMES" value="{&quot;nw_motor&quot;, &quot;ne_motor&quot;, &quot;se_motor&quot;, &quot;sw_motor&quot;}"/>
     <define name="JSBSIM_MODEL" value="&quot;simple_ardrone2&quot;"/>

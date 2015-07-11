@@ -42,18 +42,18 @@
       <call fun="NavKillThrottle()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
     </block>
-    <block name="Start Engine">
+    <block name="Start Engine" key="t">
       <set value="FALSE" var="behavior_tree_control"/>
       <call fun="NavResurrect()"/>
       <set value="stateGetNedToBodyEulers_i()->psi" var="nav_heading"/>
       <attitude pitch="0" roll="0" throttle="0" until="stage_time > 1" vmode="throttle"/>
     </block>
     <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
-      <exception cond="stateGetPositionEnu_f()->z > 0.5" deroute="Standby"/>
+      <exception cond="stateGetPositionEnu_f()->z > 0.5" deroute="BT_CONTROL"/>
       <call fun="NavSetWaypointHere(WP_CLIMB)"/>
       <stay climb="0.5" vmode="climb" wp="CLIMB"/>
     </block>
-    <block name="Standby" strip_button="Standby" strip_icon="home.png">
+    <block name="Standby" key="s" strip_button="Standby" strip_icon="home.png">
       <set value="FALSE" var="behavior_tree_control"/>
       <call fun="NavSetWaypointHere(WP_STDBY)"/>
       <stay wp="STDBY"/>
@@ -62,13 +62,13 @@
       <circle radius="1" wp="CIRCLE"/>
     </block>
     <block name="circle2.5m">
-      <circle radius="2.5" wp="CIRCLE"/>
+      <circle radius="3" wp="CIRCLE"/>
     </block>
-    <block name="BT_CONTROL">
+    <block name="BT_CONTROL" key="b">
       <set value="TRUE" var="behavior_tree_control"/>
       <stay wp="STDBY"/> <!--Dummy stay-->
     </block>
-    <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
+    <block name="land here" key="l" strip_button="Land Here" strip_icon="land-right.png">
       <set value="FALSE" var="behavior_tree_control"/>
       <call fun="NavSetWaypointHere(WP_TD)"/>
     </block>

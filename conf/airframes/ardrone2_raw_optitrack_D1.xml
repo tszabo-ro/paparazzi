@@ -5,7 +5,7 @@
   <firmware name="rotorcraft">
     <target name="ap" board="ardrone2_raw">
       <configure name="HOST" value="192.168.209.234"/>
-      <define name="LINK_HOST" value="\\\"192.168.209.19\\\""/>
+      <define name="LINK_HOST" value="\\\"192.168.209.24\\\""/>
 <!--      <configure name="HOST" value="192.168.1.1"/>
       <define name="LINK_HOST" value="\\\"192.168.1.3\\\""/>-->
       <define name="AUTOPILOT_DISABLE_AHRS_KILL"/>
